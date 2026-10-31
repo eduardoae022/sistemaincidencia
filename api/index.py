@@ -1,49 +1,29 @@
 import os
 import sys
+import json
 
-# Agregar la raíz del proyecto al PYTHONPATH
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
-from django.core.wsgi import get_wsgi_application as _get_wsgi
-
-_inner = _get_wsgi()
-
-
-class _VercelWSGI:
-    """
-    Wrapper WSGI que limpia el path interno de Vercel ANTES de que Django
-    construya el HttpRequest y ejecute el URL resolver.
-
-    Vercel envía PATH_INFO = '/api/index.py' (el script de la función)
-    en lugar del path original que el usuario solicitó.
-    Aquí lo normalizamos a '/' para que Django enrute correctamente.
-    """
-
-    def __init__(self, wsgi_app):
-        self._app = wsgi_app
-
-    def __call__(self, environ, start_response):
-        # --- Limpiar path interno de Vercel ---
-        path = environ.get('PATH_INFO', '/')
-        if path == '/api/index.py' or path == '/api/index.py/':
-            environ['PATH_INFO'] = '/'
-        elif path.startswith('/api/index.py/'):
-            environ['PATH_INFO'] = path[len('/api/index.py'):]
-        elif path == '/api' or path == '/api/':
-            environ['PATH_INFO'] = '/'
-        elif path.startswith('/api/'):
-            environ['PATH_INFO'] = path[len('/api'):]
-
-        # --- Informar a Django que el proxy usa HTTPS ---
-        environ['HTTP_X_FORWARDED_PROTO'] = 'https'
-        environ['wsgi.url_scheme'] = 'https'
-
-        return self._app(environ, start_response)
-
-
-# Vercel busca una variable llamada 'app' que sea callable WSGI
-app = _VercelWSGI(_inner)
+def app(environ, start_response):
+    status = '200 OK'
+    response_headers = [('Content-type', 'application/json; charset=utf-8')]
+    start_response(status, response_headers)
+    
+    # Extraer variables clave de environ
+    debug_info = {
+        'PATH_INFO': environ.get('PATH_INFO'),
+        'REQUEST_URI': environ.get('REQUEST_URI'),
+        'RAW_URI': environ.get('RAW_URI'),
+        'HTTP_X_FORWARDED_URI': environ.get('HTTP_X_FORWARDED_URI'),
+        'HTTP_X_INVOKE_PATH': environ.get('HTTP_X_INVOKE_PATH'),
+        'HTTP_X_MATCHED_PATH': environ.get('HTTP_X_MATCHED_PATH'),
+        'SCRIPT_NAME': environ.get('SCRIPT_NAME'),
+        'QUERY_STRING': environ.get('QUERY_STRING'),
+        'HTTP_HOST': environ.get('HTTP_HOST'),
+        'ALL_HTTP_HEADERS': {k: v for k, v in environ.items() if k.startswith('HTTP_') or k.startswith('x_') or 'PATH' in k or 'URI' in k}
+    }
+    return [json.dumps(debug_info, indent=2).encode('utf-8')]

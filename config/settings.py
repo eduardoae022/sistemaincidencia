@@ -36,12 +36,11 @@ CSRF_TRUSTED_ORIGINS = [
     'https://sistemaincidencia.vercel.app',
 ]
 
-# Cookies seguras para HTTPS en Vercel
-SESSION_COOKIE_SECURE = not DEBUG
+# Cookies seguras — Vercel siempre opera en HTTPS
+SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = 'Lax'
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # ==============================================================================
 # APLICACIONES
@@ -63,7 +62,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'config.middleware.VercelPathMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
