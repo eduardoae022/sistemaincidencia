@@ -82,7 +82,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # ==============================================================================
 # BASE DE DATOS — Soporte Híbrido: Supabase (PostgreSQL), Local (MySQL) o Build (SQLite)
 # ==============================================================================
-DATABASE_URL = env('DATABASE_URL', default=None)
+DATABASE_URL = os.environ.get('DATABASE_URL') or env('DATABASE_URL', default=None)
 
 if DATABASE_URL and dj_database_url:
     DATABASES = {
