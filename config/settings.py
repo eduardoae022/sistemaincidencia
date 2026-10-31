@@ -13,20 +13,35 @@ except ImportError:
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Leer variables de entorno desde .env
+# Leer variables de entorno desde .env (si existe — no existe en Vercel)
 env = environ.Env(
     DEBUG=(bool, False),
     DB_PORT=(int, 3306),
 )
-environ.Env.read_env(BASE_DIR / '.env')
+try:
+    environ.Env.read_env(BASE_DIR / '.env')
+except Exception:
+    pass
 
 # ==============================================================================
 # SEGURIDAD
 # ==============================================================================
-SECRET_KEY = env('SECRET_KEY', default='django-insecure-cambiar-en-produccion-1234567890abcdefghijklmnopqrstuvwxyz')
-DEBUG = env.bool('DEBUG', default=False)
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '.vercel.app', '*'])
-CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=['https://*.vercel.app', 'http://127.0.0.1', 'http://localhost'])
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-cambiar-en-produccion-1234567890abcdefghijklmnopqrstuvwxyz')
+DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.vercel.app', '*']
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.vercel.app',
+    'http://127.0.0.1',
+    'http://localhost',
+    'https://sistemaincidencia.vercel.app',
+]
+
+# Cookies seguras para HTTPS en Vercel
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SAMESITE = 'Lax'
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # ==============================================================================
 # APLICACIONES
@@ -48,7 +63,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'config.middleware.VercelPathMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -81,23 +95,23 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # ==============================================================================
-# BASE DE DATOS — Soporte Híbrido: Supabase (PostgreSQL), Local (MySQL) o Build (SQLite)
+# BASE DE DATOS — Supabase (PostgreSQL), Local (MySQL) o SQLite de respaldo
 # ==============================================================================
 DATABASE_URL = os.environ.get('DATABASE_URL') or env('DATABASE_URL', default=None)
 
 if DATABASE_URL and dj_database_url:
     DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=False)
     }
-elif env('DB_NAME', default=None):
+elif os.environ.get('DB_NAME') or env('DB_NAME', default=None):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': env('DB_NAME'),
-            'USER': env('DB_USER', default='root'),
-            'PASSWORD': env('DB_PASSWORD', default=''),
-            'HOST': env('DB_HOST', default='localhost'),
-            'PORT': env('DB_PORT', default=3306),
+            'NAME': os.environ.get('DB_NAME') or env('DB_NAME'),
+            'USER': os.environ.get('DB_USER', env('DB_USER', default='root')),
+            'PASSWORD': os.environ.get('DB_PASSWORD', env('DB_PASSWORD', default='')),
+            'HOST': os.environ.get('DB_HOST', env('DB_HOST', default='localhost')),
+            'PORT': int(os.environ.get('DB_PORT', env('DB_PORT', default=3306))),
             'OPTIONS': {
                 'charset': 'utf8mb4',
                 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
@@ -152,7 +166,7 @@ LOGOUT_REDIRECT_URL = '/usuarios/login/'
 # ==============================================================================
 # EMAIL (consola para desarrollo)
 # ==============================================================================
-EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 
 # ==============================================================================
 # CAMPO PK POR DEFECTO
