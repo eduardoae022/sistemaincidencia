@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Servicios Afectados{% endblock %}
+{% block topbar_title %}Catálogos — Servicios Afectados{% endblock %}
+{% block nav_catalogos %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h2 class="section-title mb-0">Servicios Afectados</h2>
+  <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalNuevoServ" id="btn_nuevo_serv">
+    <i class="bi bi-plus-circle me-2"></i>Nuevo Servicio
+  </button>
+</div>
+
+<div class="card">
+  <div class="table-container">
+    <table class="table table-hover" id="tabla_servicios">
+      <thead><tr><th>#</th><th>Nombre</th><th>Categoría</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        {% for s in servicios %}
+        <tr>
+          <td class="text-muted">{{ forloop.counter }}</td>
+          <td class="font-semibold">{{ s.nombre }}</td>
+          <td><span class="badge bg-light text-dark border">{{ s.categoria.nombre }}</span></td>
+          <td>
+            {% if s.activo %}
+              <span class="badge bg-success" style="font-size:.75rem">Activo</span>
+            {% else %}
+              <span class="badge bg-secondary" style="font-size:.75rem">Inactivo</span>
+            {% endif %}
+          </td>
+          <td>
+            <button class="btn btn-sm btn-outline-secondary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalEditServ{{ s.pk }}"
+                    id="btn_edit_serv_{{ s.pk }}">
+              <i class="bi bi-pencil"></i>
+            </button>
+          </td>
+        </tr>
+        <div class="modal fade" id="modalEditServ{{ s.pk }}" tabindex="-1">
+          <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Editar: {{ s.nombre }}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'catalogos:editar_servicio' s.pk %}">
+              {% csrf_token %}
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label class="form-label">Nombre</label>
+                  <input type="text" name="nombre" value="{{ s.nombre }}" class="form-control" id="edit_serv_nom_{{ s.pk }}">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Categoría</label>
+                  <select name="categoria" class="form-select" id="edit_serv_cat_{{ s.pk }}">
+                    {% for cat in categorias %}
+                      <option value="{{ cat.pk }}" {% if cat.pk == s.categoria.pk %}selected{% endif %}>{{ cat.nombre }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="form-check">
+                  <input type="checkbox" name="activo" class="form-check-input" id="edit_serv_act_{{ s.pk }}" {% if s.activo %}checked{% endif %}>
+                  <label class="form-check-label" for="edit_serv_act_{{ s.pk }}">Activo</label>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary-custom">Guardar</button>
+              </div>
+            </form>
+          </div></div>
+        </div>
+        {% empty %}
+        <tr><td colspan="5" class="text-center py-4 text-muted">Sin servicios.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="modalNuevoServ" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">Nuevo Servicio Afectado</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <form method="post" action="{% url 'catalogos:crear_servicio' %}" id="form_nuevo_serv">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Nombre <span class="text-danger">*</span></label>
+          {{ form.nombre }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Categoría <span class="text-danger">*</span></label>
+          {{ form.categoria }}
+        </div>
+        <div class="form-check">
+          {{ form.activo }}
+          <label class="form-check-label" for="{{ form.activo.id_for_label }}">Activo</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary-custom" id="btn_crear_serv_submit">Crear servicio</button>
+      </div>
+    </form>
+  </div></div>
+</div>
+{% endblock %}

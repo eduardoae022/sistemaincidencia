@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load static ticket_tags %}
+
+{% block title %}Registrar Incidencia{% endblock %}
+{% block topbar_title %}Nueva Incidencia{% endblock %}
+{% block nav_nuevo %}active{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="d-flex align-items-center gap-2 mb-4">
+      <a href="{% url 'tickets:bandeja' %}" class="btn btn-sm btn-light">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div>
+        <h2 class="section-title mb-0">Registrar nueva incidencia</h2>
+        <p class="text-muted mb-0" style="font-size:.82rem">Complete el formulario para crear un ticket de soporte</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Datos de la incidencia</h6>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'tickets:registrar' %}" id="form_registrar_ticket">
+          {% csrf_token %}
+
+          <div class="mb-4">
+            {{ form.servicio_afectado.label_tag }}
+            {{ form.servicio_afectado }}
+            {% if form.servicio_afectado.errors %}
+              <div class="text-danger small mt-1">{{ form.servicio_afectado.errors.0 }}</div>
+            {% endif %}
+            <div class="form-text">Seleccione el sistema o servicio que está fallando</div>
+          </div>
+
+          <div class="mb-4">
+            {{ form.descripcion.label_tag }}
+            {{ form.descripcion }}
+            {% if form.descripcion.errors %}
+              <div class="text-danger small mt-1">{{ form.descripcion.errors.0 }}</div>
+            {% endif %}
+            <div class="form-text">
+              Sea específico: incluya qué pasó, cuándo ocurrió, mensajes de error exactos y el impacto en su trabajo.
+            </div>
+          </div>
+
+          <div class="alert alert-info d-flex gap-2 align-items-start py-2">
+            <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
+            <small>
+              Su ticket será revisado y priorizado por la mesa de ayuda. Recibirá
+              actualizaciones a medida que avance el proceso.
+            </small>
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end mt-3">
+            <a href="{% url 'tickets:bandeja' %}" class="btn btn-outline-secondary" id="btn_cancelar_registro">Cancelar</a>
+            <button type="submit" class="btn btn-primary-custom" id="btn_enviar_ticket">
+              <i class="bi bi-send me-2"></i>Registrar incidencia
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

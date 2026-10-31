@@ -1,0 +1,164 @@
+{% load static ticket_tags %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sistema de Gestión de Incidencias — URBINMOBILIARIA S.A.C.">
+  <title>{% block title %}Sistema de Incidencias{% endblock %} | URBINMOBILIARIA</title>
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Estilos propios -->
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+{% if user.is_authenticated %}
+<!-- ══════════════ SIDEBAR ══════════════ -->
+<aside class="sidebar" id="sidebar">
+  <a class="sidebar-brand" href="{% url 'tickets:bandeja' %}">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+    </div>
+    <div class="brand-text">
+      Incidencias
+      <span>URBINMOBILIARIA S.A.C.</span>
+    </div>
+  </a>
+
+  <nav class="sidebar-nav">
+    <!-- Módulo principal -->
+    <div class="nav-section">Principal</div>
+    <a class="sidebar-link {% block nav_bandeja %}{% endblock %}" href="{% url 'tickets:bandeja' %}">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+      Bandeja de Tickets
+    </a>
+    <a class="sidebar-link {% block nav_nuevo %}{% endblock %}" href="{% url 'tickets:registrar' %}">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+      Nueva Incidencia
+    </a>
+
+    {% with rol=request.user|get_rol %}
+    {% if rol == 'Administrador' or rol == 'Operador' %}
+    <!-- Reportes y datos -->
+    <div class="nav-section">Reportes</div>
+    <a class="sidebar-link {% block nav_dashboard %}{% endblock %}" href="{% url 'reportes:dashboard' %}">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+      Dashboard
+    </a>
+    <a class="sidebar-link" href="{% url 'reportes:exportar_dataset' %}">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+      Exportar Dataset (CSV)
+    </a>
+    <a class="sidebar-link" href="{% url 'reportes:exportar_excel' %}">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+      Exportar Excel
+    </a>
+    {% endif %}
+
+    {% if rol == 'Administrador' %}
+    <!-- Administración -->
+    <div class="nav-section">Administración</div>
+    <a class="sidebar-link {% block nav_catalogos %}{% endblock %}" href="{% url 'catalogos:categorias' %}">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>
+      Catálogos
+    </a>
+    <a class="sidebar-link {% block nav_sla %}{% endblock %}" href="{% url 'catalogos:sla' %}">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+      Configuración SLA
+    </a>
+    <a class="sidebar-link {% block nav_usuarios %}{% endblock %}" href="{% url 'usuarios:gestion' %}">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+      Usuarios
+    </a>
+    <a class="sidebar-link {% block nav_bitacora %}{% endblock %}" href="{% url 'reportes:bitacora' %}">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+      Bitácora Auditoría
+    </a>
+    <a class="sidebar-link" href="{% url 'admin:index' %}">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+      Panel de Administración
+    </a>
+    {% endif %}
+    {% endwith %}
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar">{{ request.user.first_name|first|upper|default:request.user.username|first|upper }}</div>
+      <div class="user-info">
+        <div class="user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div class="user-role">
+          {% with rol=request.user|get_rol %}{{ rol|default:"Usuario" }}{% endwith %}
+        </div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════════ TOPBAR ══════════════ -->
+<header class="topbar">
+  <div class="d-flex align-items-center gap-2">
+    <button class="btn btn-sm btn-light d-md-none" id="sidebarToggle">
+      <i class="bi bi-list fs-5"></i>
+    </button>
+    <h1 class="topbar-title mb-0">{% block topbar_title %}Sistema de Incidencias{% endblock %}</h1>
+  </div>
+  <div class="topbar-actions">
+    <a href="{% url 'usuarios:perfil' %}" class="btn btn-sm btn-light">
+      <i class="bi bi-person-circle me-1"></i>Perfil
+    </a>
+    <form method="post" action="{% url 'usuarios:logout' %}" class="d-inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-danger">
+        <i class="bi bi-box-arrow-right me-1"></i>Salir
+      </button>
+    </form>
+  </div>
+</header>
+
+<!-- ══════════════ CONTENIDO ══════════════ -->
+<main class="main-content">
+  <!-- Mensajes de Django -->
+  {% if messages %}
+  <div class="mb-3">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
+      {% if message.tags == 'success' %}<i class="bi bi-check-circle-fill text-success"></i>
+      {% elif message.tags == 'danger' %}<i class="bi bi-exclamation-triangle-fill text-danger"></i>
+      {% elif message.tags == 'warning' %}<i class="bi bi-exclamation-circle-fill text-warning"></i>
+      {% else %}<i class="bi bi-info-circle-fill text-info"></i>{% endif %}
+      <span>{{ message|safe }}</span>
+      <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+</main>
+
+{% else %}
+<!-- Sin sidebar para usuarios no autenticados -->
+{% block auth_content %}{% endblock %}
+{% endif %}
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- HTMX -->
+<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+<script>
+  // Toggle sidebar en móvil
+  document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+    document.getElementById('sidebar')?.classList.toggle('open');
+  });
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load static ticket_tags %}
+
+{% block title %}Bandeja de Tickets{% endblock %}
+{% block topbar_title %}Bandeja de Tickets{% endblock %}
+{% block nav_bandeja %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h2 class="section-title mb-0">Bandeja de Tickets</h2>
+    <p class="text-muted mb-0" style="font-size:.82rem">
+      {% with rol=request.user|get_rol %}
+        {% if rol == 'Solicitante' %}Mis incidencias registradas
+        {% elif rol == 'Técnico' %}Tickets asignados a mí
+        {% else %}Todas las incidencias del sistema{% endif %}
+      {% endwith %}
+    </p>
+  </div>
+  <a href="{% url 'tickets:registrar' %}" class="btn btn-primary-custom" id="btn_nueva_incidencia">
+    <i class="bi bi-plus-circle me-2"></i>Nueva Incidencia
+  </a>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>Filtros</h6>
+    <a href="{% url 'tickets:bandeja' %}" class="btn btn-sm btn-outline-secondary">Limpiar</a>
+  </div>
+  <div class="card-body">
+    <form method="get" id="form_filtros"
+          hx-get="{% url 'tickets:bandeja' %}"
+          hx-target="#tabla-tickets"
+          hx-trigger="change from:select, keyup changed delay:600ms from:input[type=text]"
+          hx-push-url="true">
+      <div class="row g-2">
+        <div class="col-md-2">{{ form.estado }}</div>
+        <div class="col-md-2">{{ form.prioridad }}</div>
+        <div class="col-md-2">{{ form.categoria }}</div>
+        {% with rol=request.user|get_rol %}
+          {% if rol != 'Solicitante' and rol != 'Técnico' %}
+          <div class="col-md-2">{{ form.tecnico }}</div>
+          {% endif %}
+        {% endwith %}
+        <div class="col-md-2">{{ form.fecha_desde }}</div>
+        <div class="col-md-2">{{ form.fecha_hasta }}</div>
+        <div class="col-md-3">{{ form.buscar }}</div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-primary-custom btn-sm" id="btn_filtrar">
+            <i class="bi bi-search me-1"></i>Buscar
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Tabla de tickets -->
+<div id="tabla-tickets">
+  {% include 'tickets/partials/tabla_tickets.html' %}
+</div>
+{% endblock %}

@@ -1,0 +1,617 @@
+{% extends 'base.html' %}
+{% load static ticket_tags %}
+
+{% block title %}{{ ticket.codigo }} — Detalle{% endblock %}
+{% block topbar_title %}{{ ticket.codigo }}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{% url 'tickets:bandeja' %}" class="btn btn-sm btn-light">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div class="flex-grow-1">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <h2 class="section-title mb-0 ticket-code">{{ ticket.codigo }}</h2>
+      <span class="badge-estado {{ ticket.estado|estado_css }}">{{ ticket.estado }}</span>
+      {% if ticket.prioridad_operador %}
+        <span class="badge-prioridad {{ ticket.prioridad_operador|prioridad_css }}">{{ ticket.prioridad_operador }}</span>
+      {% endif %}
+      {% if ticket.es_reapertura %}
+        <span class="badge bg-warning text-dark">
+          <i class="bi bi-arrow-repeat me-1"></i>Reapertura de {{ ticket.ticket_original.codigo }}
+        </span>
+      {% endif %}
+    </div>
+    <p class="text-muted mb-0" style="font-size:.8rem">
+      Registrado {{ ticket.fecha_hora_registro|date:"d/m/Y H:i" }}
+      por {{ ticket.solicitante.get_full_name|default:ticket.solicitante.username }}
+    </p>
+  </div>
+  <!-- SLA indicator -->
+  {% if sla_restante is not None %}
+  <div class="text-end">
+    <div class="sla-indicator {{ estado_sla|sla_css }} d-flex flex-column align-items-end gap-0" style="font-size:.85rem">
+      <span class="d-flex align-items-center gap-1">
+        <span class="sla-dot"></span>
+        <strong>SLA</strong>
+      </span>
+      {% if sla_restante < 0 %}
+        <span>Vencido hace {{ sla_restante|floatformat:1|slice:"1:" }}h</span>
+      {% else %}
+        <span>{{ sla_restante|floatformat:1 }}h restantes</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="row g-4">
+  <!-- ═══ COLUMNA IZQUIERDA — Información y acciones ═══ -->
+  <div class="col-lg-7">
+
+    <!-- Información del ticket -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Información de la incidencia</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 mb-3">
+          <div class="col-sm-6">
+            <div class="form-label text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em">Categoría</div>
+            <div class="font-semibold">{{ ticket.categoria.nombre|default:"Sin clasificar" }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div class="form-label text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em">Servicio afectado</div>
+            <div class="font-semibold">{{ ticket.servicio_afectado.nombre|default:"Sin clasificar" }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div class="form-label text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em">Técnico asignado</div>
+            <div class="font-semibold">{{ ticket.tecnico_asignado.get_full_name|default:"Sin asignar" }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div class="form-label text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em">SLA máximo</div>
+            <div class="font-semibold">
+              {% if ticket.sla_maximo_horas %}{{ ticket.sla_maximo_horas }}h{% else %}No definido{% endif %}
+            </div>
+          </div>
+          {% if ticket.fecha_hora_primera_atencion %}
+          <div class="col-sm-6">
+            <div class="form-label text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em">Primera atención (TPA)</div>
+            <div class="font-semibold">
+              {{ ticket.fecha_hora_primera_atencion|date:"d/m/Y H:i" }}
+              {% if tpa_horas is not None %}
+              <span class="text-muted" style="font-size:.78rem">({{ tpa_horas }}h desde el registro)</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+          {% if ticket.fecha_hora_cierre %}
+          <div class="col-sm-6">
+            <div class="form-label text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em">Cierre</div>
+            <div class="font-semibold">{{ ticket.fecha_hora_cierre|date:"d/m/Y H:i" }}</div>
+          </div>
+          {% endif %}
+          {% if ticket.dentro_sla is not None %}
+          <div class="col-sm-6">
+            <div class="form-label text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em">Resultado SLA</div>
+            <div class="font-semibold">
+              {% if ticket.dentro_sla %}
+                <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Dentro del SLA</span>
+              {% else %}
+                <span class="text-danger"><i class="bi bi-x-circle-fill me-1"></i>Fuera del SLA</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+          {% if ticket.prioridad_correcta and rol in 'Administrador,Operador' %}
+          <div class="col-sm-6">
+            <div class="form-label text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em">Prioridad correcta (ground truth)</div>
+            <div>
+              <span class="badge-prioridad {{ ticket.prioridad_correcta|prioridad_css }}">{{ ticket.prioridad_correcta }}</span>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if tiene_sugerencia_ia %}
+          <div class="col-12">
+            <div class="alert alert-info d-flex align-items-center gap-2 py-2 mb-0" style="font-size:.88rem;">
+              <i class="bi bi-robot fs-5"></i>
+              <div>
+                <strong>Sugerencia IA asignada:</strong>
+                <span class="badge-prioridad {{ ticket.prioridad_modelo|prioridad_css }} mx-1">{{ ticket.prioridad_modelo }}</span>
+                con <strong>{{ ticket.confianza_modelo|porcentaje }}%</strong> de confianza
+                {% if ticket.siguio_sugerencia_ia is not None %}
+                  —
+                  {% if ticket.siguio_sugerencia_ia %}
+                    <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Operador aceptó la sugerencia</span>
+                  {% else %}
+                    <span class="text-secondary"><i class="bi bi-x-circle-fill me-1"></i>Operador asignó prioridad distinta</span>
+                  {% endif %}
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="form-label text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em">Descripción de la incidencia</div>
+        <div class="bg-light p-3 rounded" style="white-space:pre-wrap;font-size:.9rem;">{{ ticket.descripcion }}</div>
+
+        {% if ticket.solucion_aplicada %}
+        <div class="mt-3">
+          <div class="form-label text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em">Solución aplicada</div>
+          <div class="bg-light p-3 rounded border-start border-success border-3" style="white-space:pre-wrap;font-size:.9rem;">{{ ticket.solucion_aplicada }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ═══ ACCIONES POR ESTADO Y ROL ═══ -->
+
+    {% if clasif_form and rol in 'Administrador,Operador' %}
+    <div class="card mb-4 border-primary">
+      <div class="card-header" style="background:#e8f0fe;">
+        <h6 class="mb-0 text-primary"><i class="bi bi-tags me-2"></i>Clasificar incidencia</h6>
+      </div>
+      <div class="card-body">
+        {% if sugerencia_previa %}
+        <div class="alert alert-primary d-flex align-items-center justify-content-between py-2 px-3 mb-3" style="font-size:.9rem;background:#e3f2fd;border-color:#90caf9;">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-robot fs-4 text-primary"></i>
+            <div>
+              <strong>Recomendación del Modelo IA:</strong>
+              Prioridad sugerida <span class="badge-prioridad {{ sugerencia_previa.prioridad_predicha|prioridad_css }} mx-1">{{ sugerencia_previa.prioridad_predicha }}</span>
+              con <strong>{{ sugerencia_previa.confianza|porcentaje }}%</strong> de confianza
+              <div class="text-muted" style="font-size:.78rem;">
+                Probabilidades: Alta: {{ sugerencia_previa.probabilidades_por_clase.Alta|porcentaje }}% |
+                Media: {{ sugerencia_previa.probabilidades_por_clase.Media|porcentaje }}% |
+                Baja: {{ sugerencia_previa.probabilidades_por_clase.Baja|porcentaje }}%
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalExplicacionSugerencia" id="btn_abrir_modal_sugerencia">
+            <i class="bi bi-info-circle me-1"></i>Aplicar sugerencia
+          </button>
+        </div>
+
+        <!-- Modal de Explicación y Confirmación de Sugerencia ML -->
+        <div class="modal fade" id="modalExplicacionSugerencia" tabindex="-1" aria-labelledby="modalExplicacionSugerenciaLabel" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content shadow border-0">
+              <div class="modal-header bg-primary text-white py-3">
+                <h5 class="modal-title fs-6 d-flex align-items-center gap-2 mb-0" id="modalExplicacionSugerenciaLabel">
+                  <i class="bi bi-robot fs-5"></i>
+                  Sugerencia de Prioridad — Machine Learning
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+              </div>
+              <div class="modal-body p-4">
+                <!-- Tarjeta destacada de predicción -->
+                <div class="p-3 mb-3 rounded-3 border" style="background:#f8f9fa;">
+                  <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted text-uppercase fw-semibold" style="font-size:.75rem; letter-spacing:.05em;">Prioridad recomendada por el modelo</span>
+                    <span class="badge bg-secondary" style="font-size:.75rem;">Modelo: {{ sugerencia_previa.version_modelo|default:"Random Forest (Optimizado)" }}</span>
+                  </div>
+                  <div class="d-flex align-items-center gap-3">
+                    <span class="badge-prioridad {{ sugerencia_previa.prioridad_predicha|prioridad_css }} fs-5 px-3 py-1">
+                      {{ sugerencia_previa.prioridad_predicha }}
+                    </span>
+                    <span class="text-dark" style="font-size:.95rem;">
+                      Nivel de certeza: <strong>{{ sugerencia_previa.confianza|porcentaje }}%</strong>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Motivos y detalles del análisis -->
+                <div class="mb-3">
+                  <h6 class="fw-bold text-secondary mb-2" style="font-size:.82rem; text-transform:uppercase; letter-spacing:.05em;">
+                    <i class="bi bi-card-checklist me-1 text-primary"></i>Motivos del análisis
+                  </h6>
+                  <div class="bg-light p-3 rounded border" style="font-size:.88rem; line-height:1.5;">
+                    {% if sugerencia_previa.prioridad_predicha == 'Alta' %}
+                      <p class="mb-2">
+                        El modelo identificó una alta criticidad operativa en la incidencia debido a términos que refieren indisponibilidad, interrupción del servicio o afectación masiva de usuarios en <strong>{{ ticket.servicio_afectado.nombre }}</strong>, correlacionándose con eventos de prioridad <strong>Alta</strong> según los estándares ITIL y el histórico entrenado.
+                      </p>
+                    {% elif sugerencia_previa.prioridad_predicha == 'Media' %}
+                      <p class="mb-2">
+                        El modelo determinó prioridad <strong>Media</strong> ya que la incidencia presenta degradación, lentitud o fallo parcial en <strong>{{ ticket.servicio_afectado.nombre }}</strong> que afecta las funciones habituales pero cuenta con alternativas o no detiene la totalidad del servicio.
+                      </p>
+                    {% else %}
+                      <p class="mb-2">
+                        El modelo determinó prioridad <strong>Baja</strong> dado que se detectaron solicitudes rutinarias de configuración, dudas o incidencias menores sobre <strong>{{ ticket.servicio_afectado.nombre }}</strong> sin impacto severo en la continuidad operativa.
+                      </p>
+                    {% endif %}
+
+                    <div class="pt-2 border-top text-muted" style="font-size:.82rem;">
+                      <strong>Variables analizadas:</strong>
+                      <div class="row g-2 mt-1">
+                        <div class="col-sm-6">
+                          <span class="fw-semibold text-dark">Categoría:</span> {{ ticket.categoria.nombre }}
+                        </div>
+                        <div class="col-sm-6">
+                          <span class="fw-semibold text-dark">Servicio afectado:</span> {{ ticket.servicio_afectado.nombre }}
+                        </div>
+                        <div class="col-12">
+                          <span class="fw-semibold text-dark">Descripción analizada:</span>
+                          <span class="fst-italic text-secondary">"{{ ticket.descripcion|truncatewords:25 }}"</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Desglose de probabilidades -->
+                <div class="mb-3">
+                  <h6 class="fw-bold text-secondary mb-2" style="font-size:.82rem; text-transform:uppercase; letter-spacing:.05em;">
+                    <i class="bi bi-bar-chart-fill me-1 text-primary"></i>Probabilidad estimada por prioridad
+                  </h6>
+                  <div class="row g-2 text-center" style="font-size:.85rem;">
+                    <div class="col-4">
+                      <div class="border rounded p-2 {% if sugerencia_previa.prioridad_predicha == 'Alta' %}bg-danger bg-opacity-10 border-danger shadow-sm{% else %}bg-white{% endif %}">
+                        <div class="fw-bold text-danger">Alta</div>
+                        <div class="fs-6 fw-bold">{{ sugerencia_previa.probabilidades_por_clase.Alta|porcentaje }}%</div>
+                      </div>
+                    </div>
+                    <div class="col-4">
+                      <div class="border rounded p-2 {% if sugerencia_previa.prioridad_predicha == 'Media' %}bg-warning bg-opacity-10 border-warning shadow-sm{% else %}bg-white{% endif %}">
+                        <div class="fw-bold text-warning-emphasis">Media</div>
+                        <div class="fs-6 fw-bold">{{ sugerencia_previa.probabilidades_por_clase.Media|porcentaje }}%</div>
+                      </div>
+                    </div>
+                    <div class="col-4">
+                      <div class="border rounded p-2 {% if sugerencia_previa.prioridad_predicha == 'Baja' %}bg-success bg-opacity-10 border-success shadow-sm{% else %}bg-white{% endif %}">
+                        <div class="fw-bold text-success">Baja</div>
+                        <div class="fs-6 fw-bold">{{ sugerencia_previa.probabilidades_por_clase.Baja|porcentaje }}%</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Pregunta de confirmación -->
+                <div class="alert alert-warning d-flex align-items-center gap-2 mb-0 py-2" style="font-size:.88rem;">
+                  <i class="bi bi-question-circle-fill fs-5 text-warning"></i>
+                  <div>
+                    <strong>¿Desea aplicar esta sugerencia?</strong>
+                    Al presionar "Sí", se seleccionará automáticamente la prioridad <strong>{{ sugerencia_previa.prioridad_predicha }}</strong> en el formulario de clasificación.
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                  <i class="bi bi-x-lg me-1"></i>No, cancelar
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnConfirmarAplicarSugerencia">
+                  <i class="bi bi-check-lg me-1"></i>Sí, aplicar sugerencia
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+            const btnAplicar = document.getElementById('btnConfirmarAplicarSugerencia');
+            if (btnAplicar) {
+              btnAplicar.addEventListener('click', function() {
+                const selectPrioridad = document.getElementById('id_prioridad_clasif');
+                if (selectPrioridad) {
+                  selectPrioridad.value = '{{ sugerencia_previa.prioridad_predicha }}';
+                  selectPrioridad.classList.add('border-primary');
+                  const modalEl = document.getElementById('modalExplicacionSugerencia');
+                  const modal = bootstrap.Modal.getInstance(modalEl);
+                  if (modal) {
+                    modal.hide();
+                  }
+                  const aviso = document.getElementById('aviso_sugerencia_aplicada');
+                  if (aviso) {
+                    aviso.classList.remove('d-none');
+                  }
+                }
+              });
+            }
+          });
+        </script>
+        {% else %}
+        <div class="alert alert-secondary d-flex align-items-center gap-2 py-2 mb-3" style="font-size:.84rem;">
+          <i class="bi bi-info-circle"></i>
+          El modelo de Machine Learning analizará los datos y sugerirá una prioridad al guardar la clasificación.
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'tickets:clasificar' ticket.pk %}" id="form_clasificar">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Categoría</label>
+              {{ clasif_form.categoria }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Servicio afectado</label>
+              {{ clasif_form.servicio_afectado }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Prioridad <span class="text-danger">*</span></label>
+              {{ clasif_form.prioridad_operador }}
+            </div>
+          </div>
+          <div id="aviso_sugerencia_aplicada" class="alert alert-success d-none py-1 px-3 mt-2 mb-0" style="font-size:.82rem;">
+            <i class="bi bi-check-circle-fill me-1"></i>Sugerencia de IA aplicada en el selector. Presione <strong>Guardar clasificación</strong> para confirmar.
+          </div>
+          <div class="mt-3 d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary-custom" id="btn_clasificar">
+              <i class="bi bi-check2 me-2"></i>Guardar clasificación
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+
+
+    {% if asign_form and rol in 'Administrador,Operador' %}
+    <div class="card mb-4 border-warning">
+      <div class="card-header" style="background:#fff8e1;">
+        <h6 class="mb-0 text-warning"><i class="bi bi-person-check me-2"></i>Asignar técnico</h6>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'tickets:asignar' ticket.pk %}" id="form_asignar">
+          {% csrf_token %}
+          <div class="row g-2 align-items-end">
+            <div class="col-md-8">
+              <label class="form-label">Técnico de soporte</label>
+              {{ asign_form.tecnico }}
+            </div>
+            <div class="col-md-4">
+              <button type="submit" class="btn btn-warning w-100" id="btn_asignar">
+                <i class="bi bi-person-plus me-1"></i>Asignar
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if ticket.estado == 'Asignado' and rol in 'Administrador,Técnico' and ticket.tecnico_asignado == request.user %}
+    <div class="card mb-4 border-success">
+      <div class="card-header" style="background:#e8f5e9;">
+        <h6 class="mb-0 text-success"><i class="bi bi-play-circle me-2"></i>Tomar ticket</h6>
+      </div>
+      <div class="card-body">
+        <p class="text-muted mb-3" style="font-size:.875rem">
+          Al presionar este botón se registrará la <strong>fecha y hora de primera atención</strong>.
+          Este dato es fundamental para el cálculo del TPA. No lo presione hasta que realmente comience a atender.
+        </p>
+        <form method="post" action="{% url 'tickets:tomar' ticket.pk %}" id="form_tomar">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success" id="btn_tomar_ticket"
+                  onclick="return confirm('¿Confirma que va a comenzar a atender este ticket AHORA? Se registrará la hora actual.')">
+            <i class="bi bi-play-fill me-2"></i>Tomar ticket — iniciar atención
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if espera_form and rol in 'Administrador,Técnico' and ticket.tecnico_asignado == request.user %}
+    <div class="card mb-4">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-pause-circle me-2"></i>Poner en espera</h6>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'tickets:espera' ticket.pk %}" id="form_espera">
+          {% csrf_token %}
+          <label class="form-label">Motivo de la espera</label>
+          {{ espera_form.motivo }}
+          <div class="d-flex justify-content-end mt-2 gap-2">
+            {% if ticket.estado == 'En espera' %}
+            <form method="post" action="{% url 'tickets:reanudar' ticket.pk %}" id="form_reanudar" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-success btn-sm" id="btn_reanudar">
+                <i class="bi bi-play me-1"></i>Reanudar atención
+              </button>
+            </form>
+            {% else %}
+            <button type="submit" class="btn btn-warning btn-sm" id="btn_espera">
+              <i class="bi bi-pause me-1"></i>Poner en espera
+            </button>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if ticket.estado == 'En espera' and rol in 'Administrador,Técnico' and ticket.tecnico_asignado == request.user %}
+    <div class="card mb-4 border-success">
+      <div class="card-body">
+        <form method="post" action="{% url 'tickets:reanudar' ticket.pk %}" id="form_reanudar">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success" id="btn_reanudar_main">
+            <i class="bi bi-play-fill me-2"></i>Reanudar atención
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if resol_form and rol in 'Administrador,Técnico' and ticket.tecnico_asignado == request.user %}
+    <div class="card mb-4 border-info">
+      <div class="card-header" style="background:#e0f7fa;">
+        <h6 class="mb-0 text-info"><i class="bi bi-check-circle me-2"></i>Marcar como resuelto</h6>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'tickets:resolver' ticket.pk %}" id="form_resolver">
+          {% csrf_token %}
+          <label class="form-label">Solución aplicada <span class="text-danger">*</span></label>
+          {{ resol_form.solucion_aplicada }}
+          <div class="form-text mb-3">Describa los pasos realizados y la solución implementada.</div>
+          <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-info text-white" id="btn_resolver">
+              <i class="bi bi-check2-circle me-2"></i>Resolver ticket
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if ticket.estado == 'Resuelto' and rol in 'Administrador,Operador' %}
+    <div class="card mb-4 border-secondary">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <h6 class="mb-1">Cerrar ticket definitivamente</h6>
+          <p class="text-muted mb-0" style="font-size:.8rem">El ticket quedará archivado en estado Cerrado.</p>
+        </div>
+        <form method="post" action="{% url 'tickets:cerrar' ticket.pk %}" id="form_cerrar">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-secondary" id="btn_cerrar"
+                  onclick="return confirm('¿Confirma el cierre definitivo del ticket {{ ticket.codigo }}?')">
+            <i class="bi bi-archive me-2"></i>Cerrar ticket
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if reab_form %}
+    <div class="card mb-4">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-arrow-repeat me-2"></i>Reabrir incidencia</h6>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'tickets:reabrir' ticket.pk %}" id="form_reabrir">
+          {% csrf_token %}
+          <label class="form-label">Descripción del nuevo problema</label>
+          {{ reab_form.descripcion }}
+          <div class="d-flex justify-content-end mt-2">
+            <button type="submit" class="btn btn-outline-danger btn-sm" id="btn_reabrir"
+                    onclick="return confirm('Se creará un nuevo ticket como reapertura. ¿Continuar?')">
+              <i class="bi bi-arrow-repeat me-1"></i>Reabrir (crea nuevo ticket)
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if prio_correcta_form %}
+    <div class="card mb-4">
+      <div class="card-header">
+        <h6 class="mb-0">
+          <i class="bi bi-patch-check me-2"></i>Validar prioridad correcta
+          <span class="badge bg-secondary ms-1" style="font-size:.65rem">Ground Truth para ML</span>
+        </h6>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'tickets:prioridad_correcta' ticket.pk %}" id="form_prio_correcta">
+          {% csrf_token %}
+          <div class="row g-2 align-items-end">
+            <div class="col-md-6">
+              <label class="form-label">Prioridad correcta</label>
+              {{ prio_correcta_form.prioridad_correcta }}
+            </div>
+            <div class="col-md-4">
+              <button type="submit" class="btn btn-outline-primary btn-sm" id="btn_prio_correcta">
+                <i class="bi bi-save me-1"></i>Guardar validación
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ═══ COLUMNA DERECHA — Historial y comentarios ═══ -->
+  <div class="col-lg-5">
+
+    <!-- Comentarios -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-chat-dots me-2"></i>Comentarios ({{ comentarios.count }})</h6>
+      </div>
+      <div class="card-body" style="max-height:300px;overflow-y:auto;">
+        {% for c in comentarios %}
+        <div class="comment-bubble {% if c.usuario == request.user %}comment-own{% else %}comment-other{% endif %}">
+          <div style="white-space:pre-wrap;font-size:.875rem;">{{ c.texto }}</div>
+          <div class="comment-meta mt-1">
+            <strong>{{ c.usuario.get_full_name|default:c.usuario.username }}</strong> —
+            {{ c.fecha_hora|date:"d/m/Y H:i" }}
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-muted text-center py-3 mb-0" style="font-size:.85rem">Sin comentarios aún.</p>
+        {% endfor %}
+      </div>
+      <div class="card-body border-top">
+        <form method="post" action="{% url 'tickets:comentar' ticket.pk %}" id="form_comentar">
+          {% csrf_token %}
+          {{ comment_form.texto }}
+          <div class="d-flex justify-content-end mt-2">
+            <button type="submit" class="btn btn-sm btn-primary-custom" id="btn_comentar">
+              <i class="bi bi-send me-1"></i>Enviar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Bitácora -->
+    <div class="card">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-journal-text me-2"></i>Historial de acciones</h6>
+      </div>
+      <div class="card-body">
+        <div class="timeline">
+          {% for entrada in bitacora %}
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-content">
+              <div class="font-semibold" style="font-size:.85rem;">{{ entrada.accion }}</div>
+              {% if entrada.detalle %}
+              <div style="font-size:.82rem;color:var(--text-muted);">{{ entrada.detalle }}</div>
+              {% endif %}
+              {% if entrada.valor_anterior or entrada.valor_nuevo %}
+              <div style="font-size:.75rem;color:var(--text-muted);">
+                {% if entrada.valor_anterior %}<span class="text-danger">{{ entrada.valor_anterior }}</span>{% endif %}
+                {% if entrada.valor_anterior and entrada.valor_nuevo %} → {% endif %}
+                {% if entrada.valor_nuevo %}<span class="text-success">{{ entrada.valor_nuevo }}</span>{% endif %}
+              </div>
+              {% endif %}
+              <div class="timeline-meta">
+                {{ entrada.usuario.get_full_name|default:entrada.usuario.username }} —
+                {{ entrada.fecha_hora|date:"d/m/Y H:i" }}
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <p class="text-muted text-center py-2 mb-0" style="font-size:.82rem">Sin entradas en la bitácora.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Reaperturas -->
+    {% if reaperturas %}
+    <div class="card mt-4">
+      <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-arrow-repeat me-2"></i>Reaperturas</h6>
+      </div>
+      <div class="card-body">
+        {% for r in reaperturas %}
+        <div class="d-flex align-items-center justify-content-between py-1">
+          <a href="{% url 'tickets:detalle' r.pk %}" class="ticket-code text-decoration-none">{{ r.codigo }}</a>
+          <span class="badge-estado {{ r.estado|estado_css }}">{{ r.estado }}</span>
+          <span class="text-muted" style="font-size:.78rem">{{ r.fecha_hora_registro|date:"d/m/Y" }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

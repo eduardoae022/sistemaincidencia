@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% load ticket_tags %}
+
+{% block title %}Gestión de Usuarios{% endblock %}
+{% block topbar_title %}Gestión de Usuarios{% endblock %}
+{% block nav_usuarios %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h2 class="section-title mb-0">Gestión de Usuarios</h2>
+  <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalNuevoUsuario" id="btn_nuevo_usuario">
+    <i class="bi bi-person-plus me-2"></i>Nuevo Usuario
+  </button>
+</div>
+
+<div class="card">
+  <div class="table-container">
+    <table class="table table-hover" id="tabla_usuarios">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Nombre completo</th>
+          <th>Email</th>
+          <th>Rol</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+        <tr>
+          <td><code>{{ u.username }}</code></td>
+          <td>{{ u.get_full_name|default:"—" }}</td>
+          <td style="font-size:.85rem">{{ u.email|default:"—" }}</td>
+          <td>
+            {% for g in u.groups.all %}
+              <span class="badge bg-primary" style="font-size:.75rem">{{ g.name }}</span>
+            {% empty %}
+              {% if u.is_superuser %}
+                <span class="badge bg-danger" style="font-size:.75rem">Superusuario</span>
+              {% else %}
+                <span class="text-muted" style="font-size:.8rem">Sin rol</span>
+              {% endif %}
+            {% endfor %}
+          </td>
+          <td>
+            {% if u.is_active %}
+              <span class="badge bg-success" style="font-size:.75rem">Activo</span>
+            {% else %}
+              <span class="badge bg-secondary" style="font-size:.75rem">Inactivo</span>
+            {% endif %}
+          </td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalEditar{{ u.pk }}"
+                    id="btn_editar_{{ u.pk }}">
+              <i class="bi bi-pencil"></i>
+            </button>
+          </td>
+        </tr>
+
+        <!-- Modal de edición por usuario -->
+        <div class="modal fade" id="modalEditar{{ u.pk }}" tabindex="-1">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Editar: {{ u.username }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <form method="post" action="{% url 'usuarios:editar_usuario' u.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label">Nombre</label>
+                      <input type="text" name="first_name" value="{{ u.first_name }}" class="form-control" id="edit_fn_{{ u.pk }}">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">Apellido</label>
+                      <input type="text" name="last_name" value="{{ u.last_name }}" class="form-control" id="edit_ln_{{ u.pk }}">
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label">Email</label>
+                      <input type="email" name="email" value="{{ u.email }}" class="form-control" id="edit_em_{{ u.pk }}">
+                    </div>
+                    <div class="col-md-8">
+                      <label class="form-label">Rol</label>
+                      <select name="rol" class="form-select" id="edit_rol_{{ u.pk }}">
+                        <option value="">— Sin rol —</option>
+                        {% for g in grupos_disponibles %}
+                          <option value="{{ g.pk }}"
+                            {% for ug in u.groups.all %}{% if ug.pk == g.pk %}selected{% endif %}{% endfor %}>
+                            {{ g.name }}
+                          </option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">Estado</label>
+                      <div class="form-check mt-2">
+                        <input type="checkbox" name="is_active" class="form-check-input"
+                               id="edit_act_{{ u.pk }}" {% if u.is_active %}checked{% endif %}>
+                        <label class="form-check-label" for="edit_act_{{ u.pk }}">Activo</label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                  <button type="submit" class="btn btn-primary-custom">Guardar cambios</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center py-5 text-muted">
+            <i class="bi bi-people display-6 d-block mb-2"></i>
+            No hay usuarios registrados.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Nuevo Usuario -->
+<div class="modal fade" id="modalNuevoUsuario" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Crear nuevo usuario</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'usuarios:crear_usuario' %}" id="form_crear_usuario">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Nombre de usuario <span class="text-danger">*</span></label>
+              {{ form_crear.username }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Rol <span class="text-danger">*</span></label>
+              {{ form_crear.rol }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Nombre</label>
+              {{ form_crear.first_name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Apellido</label>
+              {{ form_crear.last_name }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Email</label>
+              {{ form_crear.email }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Contraseña <span class="text-danger">*</span></label>
+              {{ form_crear.password1 }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Confirmar contraseña <span class="text-danger">*</span></label>
+              {{ form_crear.password2 }}
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary-custom" id="btn_crear_usuario_submit">Crear usuario</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

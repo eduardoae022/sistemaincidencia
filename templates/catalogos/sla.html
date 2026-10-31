@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}Configuración SLA{% endblock %}
+{% block topbar_title %}Configuración de SLA{% endblock %}
+{% block nav_sla %}active{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <h2 class="section-title mb-1">Configuración de SLA</h2>
+  <p class="text-muted" style="font-size:.875rem">
+    Defina el tiempo máximo de resolución por nivel de prioridad.
+    Estos valores se aplican al momento de clasificar un ticket.
+  </p>
+</div>
+
+<div class="alert alert-info d-flex gap-2 align-items-start mb-4">
+  <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
+  <small>
+    <strong>¿Cómo funciona el SLA?</strong>
+    Al clasificar un ticket, el sistema consulta esta tabla y guarda
+    el valor en el campo <code>sla_maximo_horas</code>. Al resolver el ticket,
+    compara el tiempo transcurrido contra ese valor para determinar
+    si se atendió dentro del plazo.
+  </small>
+</div>
+
+<div class="row g-4">
+  {% for sla in slas %}
+  <div class="col-md-4">
+    <div class="card {% if sla.prioridad == 'Alta' %}border-danger{% elif sla.prioridad == 'Media' %}border-warning{% else %}border-success{% endif %}">
+      <div class="card-header">
+        <h6 class="mb-0">
+          {% if sla.prioridad == 'Alta' %}
+            <span class="text-danger"><i class="bi bi-arrow-up-circle-fill me-2"></i>Prioridad Alta</span>
+          {% elif sla.prioridad == 'Media' %}
+            <span class="text-warning"><i class="bi bi-dash-circle-fill me-2"></i>Prioridad Media</span>
+          {% else %}
+            <span class="text-success"><i class="bi bi-arrow-down-circle-fill me-2"></i>Prioridad Baja</span>
+          {% endif %}
+        </h6>
+      </div>
+      <div class="card-body text-center py-4">
+        <div style="font-size:3rem;font-weight:800;color:var(--primary)">{{ sla.horas_maximas }}h</div>
+        <div class="text-muted" style="font-size:.82rem">Horas máximas de resolución</div>
+        <button class="btn btn-sm btn-outline-primary mt-3"
+                data-bs-toggle="modal"
+                data-bs-target="#modalSLA{{ sla.pk }}"
+                id="btn_edit_sla_{{ sla.pk }}">
+          <i class="bi bi-pencil me-1"></i>Editar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalSLA{{ sla.pk }}" tabindex="-1">
+    <div class="modal-dialog"><div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Editar SLA — Prioridad {{ sla.prioridad }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'catalogos:editar_sla' sla.pk %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <label class="form-label">Horas máximas de resolución <span class="text-danger">*</span></label>
+          <input type="number" name="horas_maximas" value="{{ sla.horas_maximas }}"
+                 class="form-control" min="1" id="edit_sla_h_{{ sla.pk }}"
+                 required>
+          <input type="hidden" name="prioridad" value="{{ sla.prioridad }}">
+          <div class="form-text">Ingrese el número de horas. El valor actual es {{ sla.horas_maximas }}h.</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary-custom">Guardar</button>
+        </div>
+      </form>
+    </div></div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

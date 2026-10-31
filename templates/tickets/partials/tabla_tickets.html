@@ -1,0 +1,107 @@
+{% load ticket_tags %}
+<div class="card">
+  <div class="card-header">
+    <span class="text-muted" style="font-size:.82rem">
+      <strong>{{ total }}</strong> ticket{{ total|pluralize:"s" }} encontrado{{ total|pluralize:"s" }}
+    </span>
+  </div>
+  <div class="table-container">
+    <table class="table table-hover" id="tabla_tickets_main">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Estado</th>
+          <th>Prioridad</th>
+          <th>Categoría</th>
+          <th>Descripción</th>
+          <th>Solicitante</th>
+          <th>Técnico</th>
+          <th>Tiempo</th>
+          <th>SLA</th>
+          <th>Registrado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in tickets_con_sla %}
+        {% with t=item.ticket %}
+        <tr>
+          <td>
+            <a href="{% url 'tickets:detalle' t.pk %}" class="ticket-code text-decoration-none">
+              {{ t.codigo }}
+            </a>
+            {% if t.es_reapertura %}
+              <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem" title="Reapertura de {{ t.ticket_original.codigo }}">RA</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge-estado {{ t.estado|estado_css }}">
+              {{ t.estado }}
+            </span>
+          </td>
+          <td>
+            {% if t.prioridad_operador %}
+            <span class="badge-prioridad {{ t.prioridad_operador|prioridad_css }}">
+              {% if t.prioridad_operador == 'Alta' %}<i class="bi bi-arrow-up"></i>
+              {% elif t.prioridad_operador == 'Media' %}<i class="bi bi-dash"></i>
+              {% else %}<i class="bi bi-arrow-down"></i>{% endif %}
+              {{ t.prioridad_operador }}
+            </span>
+            {% else %}
+            <span class="text-muted" style="font-size:.78rem">Sin clasificar</span>
+            {% endif %}
+          </td>
+          <td>{{ t.categoria.nombre|default:"—" }}</td>
+          <td>
+            <span title="{{ t.descripcion }}" style="cursor:help">
+              {{ t.descripcion|truncatechars:50 }}
+            </span>
+          </td>
+          <td>{{ t.solicitante.get_full_name|default:t.solicitante.username }}</td>
+          <td>{{ t.tecnico_asignado.get_full_name|default:"—" }}</td>
+          <td>
+            <span class="text-muted" style="font-size:.8rem">{{ item.horas_transcurridas }}h</span>
+          </td>
+          <td>
+            {% if item.sla_restante is not None %}
+              <span class="sla-indicator {{ item.estado_sla|sla_css }}">
+                <span class="sla-dot"></span>
+                {% if item.sla_restante < 0 %}
+                  Vencido ({{ item.sla_restante|floatformat:1 }}h)
+                {% else %}
+                  {{ item.sla_restante|floatformat:1 }}h rest.
+                {% endif %}
+              </span>
+            {% elif t.dentro_sla is not None %}
+              <span class="sla-indicator {{ item.estado_sla|sla_css }}">
+                <span class="sla-dot"></span>
+                {% if t.dentro_sla %}✓ En plazo{% else %}✗ Fuera{% endif %}
+              </span>
+            {% else %}
+              <span class="text-muted" style="font-size:.75rem">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="text-muted" style="font-size:.78rem">
+              {{ t.fecha_hora_registro|date:"d/m/Y H:i" }}
+            </span>
+          </td>
+          <td>
+            <a href="{% url 'tickets:detalle' t.pk %}" class="btn btn-sm btn-outline-primary" id="ver_{{ t.pk }}">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr>
+          <td colspan="11" class="text-center py-5 text-muted">
+            <i class="bi bi-inbox display-6 d-block mb-2"></i>
+            No se encontraron tickets con los filtros seleccionados.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}Mi Perfil{% endblock %}
+{% block topbar_title %}Mi Perfil{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <h2 class="section-title mb-4">Mi Perfil</h2>
+
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header"><h6 class="mb-0"><i class="bi bi-person me-2"></i>Datos personales</h6></div>
+          <div class="card-body">
+            <form method="post" action="{% url 'usuarios:perfil' %}" id="form_perfil">
+              {% csrf_token %}
+              <input type="hidden" name="actualizar_perfil" value="1">
+              <div class="mb-3">
+                <label class="form-label">Nombre</label>
+                {{ form.first_name }}
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Apellido</label>
+                {{ form.last_name }}
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Email</label>
+                {{ form.email }}
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Teléfono</label>
+                {{ form.telefono }}
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Área / Departamento</label>
+                {{ form.area }}
+              </div>
+              <button type="submit" class="btn btn-primary-custom" id="btn_actualizar_perfil">
+                <i class="bi bi-save me-1"></i>Guardar cambios
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header"><h6 class="mb-0"><i class="bi bi-lock me-2"></i>Cambiar contraseña</h6></div>
+          <div class="card-body">
+            <form method="post" action="{% url 'usuarios:cambiar_password' %}" id="form_cambiar_pass">
+              {% csrf_token %}
+              <div class="mb-3">
+                <label class="form-label">Contraseña actual</label>
+                {{ pass_form.old_password }}
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Nueva contraseña</label>
+                {{ pass_form.new_password1 }}
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Confirmar nueva contraseña</label>
+                {{ pass_form.new_password2 }}
+              </div>
+              <button type="submit" class="btn btn-outline-primary" id="btn_cambiar_pass">
+                <i class="bi bi-key me-1"></i>Cambiar contraseña
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div class="card mt-4">
+          <div class="card-body">
+            <div class="form-label text-muted mb-1" style="font-size:.72rem;text-transform:uppercase;">Usuario del sistema</div>
+            <code>{{ request.user.username }}</code>
+            <div class="form-label text-muted mb-1 mt-2" style="font-size:.72rem;text-transform:uppercase;">Rol asignado</div>
+            {% for g in request.user.groups.all %}
+              <span class="badge bg-primary">{{ g.name }}</span>
+            {% empty %}
+              <span class="text-muted">Sin rol asignado</span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

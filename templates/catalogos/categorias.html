@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load ticket_tags %}
+
+{% block title %}Categorías{% endblock %}
+{% block topbar_title %}Catálogos — Categorías{% endblock %}
+{% block nav_catalogos %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h2 class="section-title mb-0">Categorías de Incidencia</h2>
+  <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalNuevaCat" id="btn_nueva_cat">
+    <i class="bi bi-plus-circle me-2"></i>Nueva Categoría
+  </button>
+</div>
+
+<div class="card">
+  <div class="table-container">
+    <table class="table table-hover" id="tabla_categorias">
+      <thead><tr><th>#</th><th>Nombre</th><th>Estado</th><th>Servicios</th><th></th></tr></thead>
+      <tbody>
+        {% for cat in categorias %}
+        <tr>
+          <td class="text-muted">{{ forloop.counter }}</td>
+          <td class="font-semibold">{{ cat.nombre }}</td>
+          <td>
+            {% if cat.activo %}
+              <span class="badge bg-success" style="font-size:.75rem">Activa</span>
+            {% else %}
+              <span class="badge bg-secondary" style="font-size:.75rem">Inactiva</span>
+            {% endif %}
+          </td>
+          <td><span class="text-muted" style="font-size:.82rem">{{ cat.servicios.count }} servicio(s)</span></td>
+          <td>
+            <button class="btn btn-sm btn-outline-secondary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalEditCat{{ cat.pk }}"
+                    id="btn_edit_cat_{{ cat.pk }}">
+              <i class="bi bi-pencil"></i>
+            </button>
+          </td>
+        </tr>
+        <div class="modal fade" id="modalEditCat{{ cat.pk }}" tabindex="-1">
+          <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Editar: {{ cat.nombre }}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'catalogos:editar_categoria' cat.pk %}">
+              {% csrf_token %}
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label class="form-label">Nombre</label>
+                  <input type="text" name="nombre" value="{{ cat.nombre }}" class="form-control" id="edit_cat_nombre_{{ cat.pk }}">
+                </div>
+                <div class="form-check">
+                  <input type="checkbox" name="activo" class="form-check-input" id="edit_cat_activo_{{ cat.pk }}" {% if cat.activo %}checked{% endif %}>
+                  <label class="form-check-label" for="edit_cat_activo_{{ cat.pk }}">Activa</label>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary-custom">Guardar</button>
+              </div>
+            </form>
+          </div></div>
+        </div>
+        {% empty %}
+        <tr><td colspan="5" class="text-center py-4 text-muted">Sin categorías.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="modalNuevaCat" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">Nueva Categoría</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <form method="post" action="{% url 'catalogos:crear_categoria' %}" id="form_nueva_cat">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Nombre <span class="text-danger">*</span></label>
+          {{ form.nombre }}
+        </div>
+        <div class="form-check">
+          {{ form.activo }}
+          <label class="form-check-label" for="{{ form.activo.id_for_label }}">Activa</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary-custom" id="btn_crear_cat_submit">Crear categoría</button>
+      </div>
+    </form>
+  </div></div>
+</div>
+{% endblock %}

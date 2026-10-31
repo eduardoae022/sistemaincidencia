@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block auth_content %}
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+    </div>
+
+    <h1 class="text-center mb-1" style="font-size:1.4rem;font-weight:800;color:var(--primary)">
+      Sistema de Incidencias
+    </h1>
+    <p class="text-center text-muted mb-4" style="font-size:.82rem">
+      URBINMOBILIARIA S.A.C. — Mesa de Ayuda
+    </p>
+
+    {% if form.errors %}
+    <div class="alert alert-danger d-flex align-items-center gap-2 mb-3 py-2">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <small>Credenciales incorrectas. Verifique su usuario y contraseña.</small>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'usuarios:login' %}">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label" for="id_username">
+          <i class="bi bi-person me-1"></i>Usuario
+        </label>
+        {{ form.username }}
+      </div>
+      <div class="mb-4">
+        <label class="form-label" for="id_password">
+          <i class="bi bi-lock me-1"></i>Contraseña
+        </label>
+        {{ form.password }}
+      </div>
+      <button type="submit" class="btn w-100 btn-primary-custom py-2" id="btn_login">
+        <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar sesión
+      </button>
+    </form>
+
+    <div class="text-center mt-3">
+      <a href="{% url 'usuarios:password_reset' %}" class="text-muted" style="font-size:.8rem">
+        ¿Olvidó su contraseña?
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
