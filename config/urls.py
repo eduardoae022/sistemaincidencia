@@ -1,5 +1,6 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
+from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -10,6 +11,9 @@ urlpatterns = [
     path('catalogos/', include('apps.catalogos.urls', namespace='catalogos')),
     path('reportes/', include('apps.reportes.urls', namespace='reportes')),
     path('', include('apps.tickets.urls_home')),  # redirect raíz a bandeja
+    # Redirección de respaldo para Vercel Serverless
+    re_path(r'^api/index\.py/?$', RedirectView.as_view(url='/tickets/', permanent=False)),
+    re_path(r'^api/?$', RedirectView.as_view(url='/tickets/', permanent=False)),
 ]
 
 handler404 = 'apps.tickets.views.handler404'
