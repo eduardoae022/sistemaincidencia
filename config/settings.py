@@ -165,6 +165,19 @@ LOGIN_REDIRECT_URL = '/tickets/'
 LOGOUT_REDIRECT_URL = '/usuarios/login/'
 
 # ==============================================================================
+# SESIONES — Signed Cookies (ideal para Vercel Serverless: sin BD, sin latencia)
+# La sesión se cifra con SECRET_KEY y viaja dentro de la propia cookie.
+# No requiere acceso a la base de datos para leer/escribir sesiones.
+# ==============================================================================
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_AGE = 86400 * 7        # 7 días
+SESSION_COOKIE_SECURE = True          # Solo HTTPS (Vercel siempre es HTTPS)
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# ==============================================================================
 # EMAIL (consola para desarrollo)
 # ==============================================================================
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
