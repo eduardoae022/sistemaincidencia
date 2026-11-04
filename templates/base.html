@@ -49,11 +49,11 @@
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
       Dashboard
     </a>
-    <a class="sidebar-link" href="{% url 'reportes:exportar_dataset' %}">
+    <a class="sidebar-link" href="{% url 'reportes:exportar_dataset' %}?todo=1">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
       Exportar Dataset (CSV)
     </a>
-    <a class="sidebar-link" href="{% url 'reportes:exportar_excel' %}">
+    <a class="sidebar-link" href="{% url 'reportes:exportar_excel' %}?todo=1">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
       Exportar Excel
     </a>

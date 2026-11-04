@@ -157,136 +157,224 @@ def dashboard(request):
     return render(request, 'reportes/dashboard.html', context)
 
 
+def _inferir_impacto_urgencia(prioridad):
+    """
+    Mapeo de referencia ITIL estándar:
+    Alta  -> Impacto: Alto, Urgencia: Alta
+    Media -> Impacto: Medio, Urgencia: Media
+    Baja  -> Impacto: Bajo, Urgencia: Baja
+    """
+    p = (prioridad or '').strip().capitalize()
+    if p == 'Alta':
+        return 'Alto', 'Alta'
+    elif p == 'Media':
+        return 'Medio', 'Media'
+    elif p == 'Baja':
+        return 'Bajo', 'Baja'
+    return 'Medio', 'Media'
+
+
+def _construir_fila_ticket(t):
+    """
+    Construye un diccionario con las 24 columnas completas del ticket,
+    garantizando compatibilidad estricta con las 14 columnas canónicas de la tesis
+    (dataset_completo.xlsx) y agregando los datos de Machine Learning y gestión operativa.
+    Funciona para cualquier estado de la incidencia (nueva, en curso o cerrada).
+    """
+    ref_prio = t.prioridad_correcta or t.prioridad_operador or t.prioridad_modelo
+    impacto, urgencia = _inferir_impacto_urgencia(ref_prio)
+
+    if t.sla_maximo_horas:
+        sla_max_h = t.sla_maximo_horas
+    else:
+        sla_max_h = 4 if ref_prio == 'Alta' else (24 if ref_prio == 'Media' else 72)
+
+    tpa = t.calcular_horas_hasta_primera_atencion()
+    if t.fecha_hora_registro and t.fecha_hora_cierre:
+        delta = t.fecha_hora_cierre - t.fecha_hora_registro
+        horas_trans = round(delta.total_seconds() / 3600, 2)
+    elif t.fecha_hora_registro:
+        delta = timezone.now() - t.fecha_hora_registro
+        horas_trans = round(delta.total_seconds() / 3600, 2)
+    else:
+        horas_trans = 0.0
+
+    if t.dentro_sla is not None:
+        dentro_sla_str = 'Sí' if t.dentro_sla else 'No'
+    elif t.fecha_hora_registro:
+        dentro_sla_str = 'Sí' if horas_trans <= sla_max_h else 'No'
+    else:
+        dentro_sla_str = 'En curso'
+
+    if t.prioridad_operador and t.prioridad_correcta:
+        resultado = 'Correcto' if t.prioridad_operador == t.prioridad_correcta else 'Incorrecto'
+    elif t.prioridad_operador:
+        resultado = 'Sin validar'
+    else:
+        resultado = 'Pendiente'
+
+    if t.confianza_modelo is not None:
+        confianza_str = f"{round(t.confianza_modelo * 100, 2)}%"
+    else:
+        confianza_str = ''
+
+    if t.siguio_sugerencia_ia is True:
+        siguio_ia = 'Sí'
+    elif t.siguio_sugerencia_ia is False:
+        siguio_ia = 'No'
+    elif t.prioridad_operador and t.prioridad_modelo:
+        siguio_ia = 'Sí' if t.prioridad_operador == t.prioridad_modelo else 'No'
+    else:
+        siguio_ia = 'N/A'
+
+    categoria_nombre = t.categoria.nombre if t.categoria else (
+        t.servicio_afectado.categoria.nombre if (t.servicio_afectado and t.servicio_afectado.categoria) else ''
+    )
+    servicio_nombre = t.servicio_afectado.nombre if t.servicio_afectado else ''
+
+    solicitante_str = (t.solicitante.get_full_name() or t.solicitante.username) if (getattr(t, 'solicitante_id', None) and t.solicitante) else ''
+    tecnico_str = (t.tecnico_asignado.get_full_name() or t.tecnico_asignado.username) if (getattr(t, 'tecnico_asignado_id', None) and t.tecnico_asignado) else 'Sin asignar'
+
+    codigo_ticket = f"TK-{t.pk:04d}" if t.pk else "TK-PENDIENTE"
+
+    return {
+        # ── 14 Columnas Canónicas de la Tesis (dataset_completo.xlsx) ──
+        'ID Ticket': codigo_ticket,
+        'Fecha registro': t.fecha_hora_registro.strftime('%Y-%m-%d %H:%M') if t.fecha_hora_registro else '',
+        'Categoría': categoria_nombre,
+        'Descripción': t.descripcion or '',
+        'Servicio afectado': servicio_nombre,
+        'Impacto': impacto,
+        'Urgencia': urgencia,
+        'Prioridad asignada (operador)': t.prioridad_operador or 'Sin clasificar',
+        'Prioridad correcta (ITIL)': t.prioridad_correcta or 'Pendiente',
+        'Fecha primera atención': t.fecha_hora_primera_atencion.strftime('%Y-%m-%d %H:%M') if t.fecha_hora_primera_atencion else 'Sin atención aún',
+        'Horas transcurridas': horas_trans,
+        'Resultado': resultado,
+        'SLA máximo (h)': f"{sla_max_h}h",
+        '¿Dentro del SLA?': dentro_sla_str,
+        # ── Columnas Extendidas de Machine Learning y Gestión Operativa ──
+        'Prioridad sugerida (Modelo ML)': t.prioridad_modelo or 'Sin sugerencia',
+        'Confianza modelo (%)': confianza_str,
+        '¿Siguió sugerencia IA?': siguio_ia,
+        'Estado': t.estado,
+        'Fecha cierre': t.fecha_hora_cierre.strftime('%Y-%m-%d %H:%M') if t.fecha_hora_cierre else 'En curso',
+        'TPA (horas)': tpa if tpa is not None else '',
+        'Solicitante': solicitante_str,
+        'Técnico asignado': tecnico_str,
+        'Solución aplicada': t.solucion_aplicada or '',
+        '¿Es reapertura?': 'Sí' if t.es_reapertura else 'No',
+    }
+
+
+def _filtrar_tickets_para_exportacion(request):
+    """
+    Filtra los tickets para exportación asegurando que:
+    1. Por defecto, exporta TODOS los tickets (sin excluir nuevos ni históricos).
+    2. Si el usuario especificó rango en GET (?fecha_desde=...&fecha_hasta=...) y no pidió 'todo=1',
+       aplica el filtro por fecha de registro.
+    3. No excluye tickets incompletos o recién creados.
+    """
+    qs = Ticket.objects.all().select_related(
+        'categoria', 'servicio_afectado', 'servicio_afectado__categoria',
+        'solicitante', 'tecnico_asignado'
+    ).order_by('pk')
+
+    exportar_todo = request.GET.get('todo') in ['1', 'true', 'si'] or request.GET.get('todos') in ['1', 'true', 'si']
+    fecha_desde_str = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta_str = request.GET.get('fecha_hasta', '').strip()
+
+    if not exportar_todo and (fecha_desde_str or fecha_hasta_str):
+        tz = timezone.get_current_timezone()
+        if fecha_desde_str:
+            try:
+                f_desde = date.fromisoformat(fecha_desde_str)
+                dt_desde = timezone.make_aware(datetime.combine(f_desde, datetime.min.time()), tz)
+                qs = qs.filter(fecha_hora_registro__gte=dt_desde)
+            except ValueError:
+                pass
+        if fecha_hasta_str:
+            try:
+                f_hasta = date.fromisoformat(fecha_hasta_str)
+                dt_hasta = timezone.make_aware(datetime.combine(f_hasta, datetime.max.time().replace(microsecond=0)), tz)
+                qs = qs.filter(fecha_hora_registro__lte=dt_hasta)
+            except ValueError:
+                pass
+
+    if request.GET.get('excluir_reaperturas') == '1':
+        qs = qs.filter(es_reapertura=False)
+
+    return qs
+
+
 @login_required
 @requiere_rol('Administrador', 'Operador')
 def exportar_excel(request):
-    """Exporta el dashboard a Excel usando pandas + openpyxl"""
+    """Exporta todas las incidencias a Excel (.xlsx) con los 24 campos completos de la tesis y ML"""
     if not PANDAS_DISPONIBLE:
         from django.http import HttpResponseServerError
         return HttpResponseServerError('pandas/openpyxl no disponible.')
 
-    fecha_desde, fecha_hasta = _parsear_rango_fechas(request)
-    tz = timezone.get_current_timezone()
-    dt_desde = timezone.make_aware(datetime.combine(fecha_desde, datetime.min.time()), tz)
-    dt_hasta = timezone.make_aware(datetime.combine(fecha_hasta, datetime.max.time().replace(microsecond=0)), tz)
-    qs = Ticket.objects.filter(
-        fecha_hora_registro__gte=dt_desde,
-        fecha_hora_registro__lte=dt_hasta,
-    ).select_related('categoria', 'servicio_afectado', 'solicitante', 'tecnico_asignado')
-
-    # Construir DataFrame
-    filas = []
-    for t in qs:
-        tpa = t.calcular_horas_hasta_primera_atencion()
-        filas.append({
-            'ID Ticket': t.codigo,
-            'Estado': t.estado,
-            'Categoría': t.categoria.nombre if t.categoria else '',
-            'Servicio Afectado': str(t.servicio_afectado) if t.servicio_afectado else '',
-            'Prioridad Operador': t.prioridad_operador or '',
-            'Prioridad Correcta': t.prioridad_correcta or '',
-            'Fecha Registro': t.fecha_hora_registro.strftime('%Y-%m-%d %H:%M') if t.fecha_hora_registro else '',
-            'Fecha Primera Atención': t.fecha_hora_primera_atencion.strftime('%Y-%m-%d %H:%M') if t.fecha_hora_primera_atencion else '',
-            'Fecha Cierre': t.fecha_hora_cierre.strftime('%Y-%m-%d %H:%M') if t.fecha_hora_cierre else '',
-            'TPA (horas)': tpa if tpa is not None else '',
-            'SLA Máximo (horas)': t.sla_maximo_horas or '',
-            'Dentro SLA': ('Sí' if t.dentro_sla else 'No') if t.dentro_sla is not None else '',
-            'Es Reapertura': 'Sí' if t.es_reapertura else 'No',
-            'Técnico': t.tecnico_asignado.get_full_name() if t.tecnico_asignado else '',
-            'Sugerencia de ML aplicada?': 'SI' if t.siguio_sugerencia_ia else 'NO',
-        })
+    qs = _filtrar_tickets_para_exportacion(request)
+    filas = [_construir_fila_ticket(t) for t in qs]
 
     df = pd.DataFrame(filas)
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, sheet_name='Tickets', index=False)
+        df.to_excel(writer, sheet_name='Dataset_Incidencias', index=False)
 
     output.seek(0)
     response = HttpResponse(
         output.read(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    response['Content-Disposition'] = f'attachment; filename="reporte_tickets_{fecha_desde}_{fecha_hasta}.xlsx"'
+
+    fecha_desde_str = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta_str = request.GET.get('fecha_hasta', '').strip()
+    if fecha_desde_str and fecha_hasta_str and request.GET.get('todo') != '1':
+        nombre_archivo = f"dataset_incidencias_{fecha_desde_str}_{fecha_hasta_str}.xlsx"
+    else:
+        nombre_archivo = "dataset_completo_incidencias.xlsx"
+
+    response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
     return response
 
 
 @login_required
 @requiere_rol('Administrador', 'Operador')
 def exportar_dataset_csv(request):
-    """
-    Exporta el dataset para entrenamiento ML (Tabla 5 de la tesis).
-    - Excluye reaperturas (es_reapertura=True)
-    - Excluye tickets sin datos completos (sin prioridad_operador, sin cierre)
-    - Anonimiza solicitante (solo ID interno)
-    """
-    excluir_reaperturas = request.GET.get('excluir_reaperturas', '1') == '1'
-    solo_completos = request.GET.get('solo_completos', '1') == '1'
-    fecha_desde, fecha_hasta = _parsear_rango_fechas(request)
-    tz = timezone.get_current_timezone()
-    dt_desde = timezone.make_aware(datetime.combine(fecha_desde, datetime.min.time()), tz)
-    dt_hasta = timezone.make_aware(datetime.combine(fecha_hasta, datetime.max.time().replace(microsecond=0)), tz)
-
-    qs = Ticket.objects.filter(
-        fecha_hora_registro__gte=dt_desde,
-        fecha_hora_registro__lte=dt_hasta,
-    ).select_related('categoria', 'servicio_afectado')
-
-    if excluir_reaperturas:
-        qs = qs.filter(es_reapertura=False)
-
-    if solo_completos:
-        qs = qs.filter(
-            prioridad_operador__isnull=False,
-            fecha_hora_cierre__isnull=False,
-            sla_maximo_horas__isnull=False,
-            dentro_sla__isnull=False,
-        )
+    """Exporta todas las incidencias a CSV (.csv) con los 24 campos completos de la tesis y ML"""
+    qs = _filtrar_tickets_para_exportacion(request)
+    filas = [_construir_fila_ticket(t) for t in qs]
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
-    response['Content-Disposition'] = f'attachment; filename="dataset_ml_{fecha_desde}_{fecha_hasta}.csv"'
-    response.write('\ufeff')  # BOM para Excel
+    fecha_desde_str = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta_str = request.GET.get('fecha_hasta', '').strip()
+    if fecha_desde_str and fecha_hasta_str and request.GET.get('todo') != '1':
+        nombre_archivo = f"dataset_incidencias_{fecha_desde_str}_{fecha_hasta_str}.csv"
+    else:
+        nombre_archivo = "dataset_completo_incidencias.csv"
 
-    writer = csv.writer(response)
-    # Cabecera — Tabla 5 de la tesis
-    writer.writerow([
-        'id_ticket',
-        'fecha_registro',
-        'categoria',
-        'servicio_afectado',
-        'descripcion',
-        'prioridad_operador',
-        'prioridad_correcta',
-        'horas_transcurridas',
-        'sla_maximo_horas',
-        'dentro_sla',
-        'id_solicitante_anonimizado',  # Hash interno — sin nombre real
-        'Sugerencia de ML aplicada?',
-    ])
+    response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
+    response.write('\ufeff')  # BOM UTF-8 para visualización directa en Excel
 
-    for t in qs:
-        if t.fecha_hora_registro and t.fecha_hora_cierre:
-            delta = t.fecha_hora_cierre - t.fecha_hora_registro
-            horas = round(delta.total_seconds() / 3600, 2)
-        else:
-            horas = ''
-
-        # Anonimización: usar ID numérico, no nombre real
-        id_anon = f'USR-{t.solicitante_id:04d}'
-
-        writer.writerow([
-            t.codigo,
-            t.fecha_hora_registro.strftime('%Y-%m-%d %H:%M') if t.fecha_hora_registro else '',
-            t.categoria.nombre if t.categoria else '',
-            t.servicio_afectado.nombre if t.servicio_afectado else '',
-            t.descripcion,
-            t.prioridad_operador or '',
-            t.prioridad_correcta or '',
-            horas,
-            t.sla_maximo_horas or '',
-            ('1' if t.dentro_sla else '0') if t.dentro_sla is not None else '',
-            id_anon,
-            'SI' if t.siguio_sugerencia_ia else 'NO',
-        ])
+    if filas:
+        fieldnames = list(filas[0].keys())
+        writer = csv.DictWriter(response, fieldnames=fieldnames)
+        writer.writeheader()
+        for fila in filas:
+            writer.writerow(fila)
+    else:
+        dummy_fields = [
+            'ID Ticket', 'Fecha registro', 'Categoría', 'Descripción', 'Servicio afectado',
+            'Impacto', 'Urgencia', 'Prioridad asignada (operador)', 'Prioridad correcta (ITIL)',
+            'Fecha primera atención', 'Horas transcurridas', 'Resultado', 'SLA máximo (h)',
+            '¿Dentro del SLA?', 'Prioridad sugerida (Modelo ML)', 'Confianza modelo (%)',
+            '¿Siguió sugerencia IA?', 'Estado', 'Fecha cierre', 'TPA (horas)',
+            'Solicitante', 'Técnico asignado', 'Solución aplicada', '¿Es reapertura?'
+        ]
+        writer = csv.DictWriter(response, fieldnames=dummy_fields)
+        writer.writeheader()
 
     return response
 

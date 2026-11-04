@@ -17,15 +17,27 @@
       <span class="text-muted">hasta</span>
       <input type="date" name="fecha_hasta" value="{{ fecha_hasta|date:'Y-m-d' }}" class="form-control form-control-sm" style="width:150px" id="dash_fecha_hasta">
       <button type="submit" class="btn btn-sm btn-primary-custom" id="btn_aplicar_filtro">Aplicar</button>
-      <div class="ms-auto d-flex gap-2">
-        <a href="{% url 'reportes:exportar_excel' %}?fecha_desde={{ fecha_desde|date:'Y-m-d' }}&fecha_hasta={{ fecha_hasta|date:'Y-m-d' }}"
-           class="btn btn-sm btn-outline-success" id="btn_exportar_excel">
-          <i class="bi bi-file-earmark-excel me-1"></i>Excel
-        </a>
-        <a href="{% url 'reportes:exportar_dataset' %}?fecha_desde={{ fecha_desde|date:'Y-m-d' }}&fecha_hasta={{ fecha_hasta|date:'Y-m-d' }}"
-           class="btn btn-sm btn-outline-primary" id="btn_exportar_dataset">
-          <i class="bi bi-download me-1"></i>Dataset CSV
-        </a>
+      <div class="ms-auto d-flex gap-2 flex-wrap">
+        <div class="btn-group">
+          <a href="{% url 'reportes:exportar_excel' %}?fecha_desde={{ fecha_desde|date:'Y-m-d' }}&fecha_hasta={{ fecha_hasta|date:'Y-m-d' }}"
+             class="btn btn-sm btn-outline-success" id="btn_exportar_excel" title="Exportar tickets del rango seleccionado">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel (Rango)
+          </a>
+          <a href="{% url 'reportes:exportar_excel' %}?todo=1"
+             class="btn btn-sm btn-success" title="Exportar todas las incidencias registradas en la base de datos">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel (Todo)
+          </a>
+        </div>
+        <div class="btn-group">
+          <a href="{% url 'reportes:exportar_dataset' %}?fecha_desde={{ fecha_desde|date:'Y-m-d' }}&fecha_hasta={{ fecha_hasta|date:'Y-m-d' }}"
+             class="btn btn-sm btn-outline-primary" id="btn_exportar_dataset" title="Exportar dataset CSV del rango seleccionado">
+            <i class="bi bi-download me-1"></i>CSV (Rango)
+          </a>
+          <a href="{% url 'reportes:exportar_dataset' %}?todo=1"
+             class="btn btn-sm btn-primary-custom" title="Exportar dataset CSV completo con todas las incidencias">
+            <i class="bi bi-database me-1"></i>CSV (Todo)
+          </a>
+        </div>
       </div>
     </form>
   </div>
