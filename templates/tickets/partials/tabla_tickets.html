@@ -11,7 +11,10 @@
         <tr>
           <th>Código</th>
           <th>Estado</th>
-          <th>Prioridad</th>
+          <th>Prioridad Operador</th>
+          <th>Sugerencia ML</th>
+          <th>Confianza ML</th>
+          <th>¿Aceptó ML?</th>
           <th>Categoría</th>
           <th>Descripción</th>
           <th>Solicitante</th>
@@ -49,6 +52,40 @@
             </span>
             {% else %}
             <span class="text-muted" style="font-size:.78rem">Sin clasificar</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if t.prioridad_modelo %}
+            <span class="badge-prioridad {{ t.prioridad_modelo|prioridad_css }}">
+              {% if t.prioridad_modelo == 'Alta' %}<i class="bi bi-arrow-up"></i>
+              {% elif t.prioridad_modelo == 'Media' %}<i class="bi bi-dash"></i>
+              {% else %}<i class="bi bi-arrow-down"></i>{% endif %}
+              {{ t.prioridad_modelo }}
+            </span>
+            {% else %}
+            <span class="text-muted" style="font-size:.78rem">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if t.confianza_modelo is not None %}
+            <span class="badge bg-light text-dark border fw-semibold" style="font-size:.8rem">
+              {{ t.confianza_modelo|porcentaje }}%
+            </span>
+            {% else %}
+            <span class="text-muted" style="font-size:.78rem">—</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if t.siguio_sugerencia_ia is True %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size:.75rem">
+                <i class="bi bi-check-circle-fill me-1"></i>Sí
+              </span>
+            {% elif t.siguio_sugerencia_ia is False %}
+              <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1" style="font-size:.75rem">
+                <i class="bi bi-x-circle me-1"></i>No
+              </span>
+            {% else %}
+              <span class="text-muted" style="font-size:.78rem">—</span>
             {% endif %}
           </td>
           <td>{{ t.categoria.nombre|default:"—" }}</td>
@@ -95,7 +132,7 @@
         {% endwith %}
         {% empty %}
         <tr>
-          <td colspan="11" class="text-center py-5 text-muted">
+          <td colspan="14" class="text-center py-5 text-muted">
             <i class="bi bi-inbox display-6 d-block mb-2"></i>
             No se encontraron tickets con los filtros seleccionados.
           </td>
