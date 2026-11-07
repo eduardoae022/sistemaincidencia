@@ -7,17 +7,17 @@
 
     <!-- Píldoras de Filtro Rápido para Validación ITIL (Tesis) -->
     <div class="d-flex align-items-center gap-2">
-      <a href="{% url 'tickets:bandeja' %}"
+      <a href="{% url 'tickets:bandeja' %}{% if query_sin_ic %}?{{ query_sin_ic }}{% endif %}"
          class="btn btn-sm {% if not filtro_ic %}btn-primary{% else %}btn-outline-secondary{% endif %} py-1 px-3"
          style="font-size:.76rem; border-radius: 20px;">
         <i class="bi bi-list-ul me-1"></i>Todos ({{ total }})
       </a>
-      <a href="{% url 'tickets:bandeja' %}?filtro_ic=correcto"
+      <a href="{% url 'tickets:bandeja' %}?filtro_ic=correcto{% if query_sin_ic %}&{{ query_sin_ic }}{% endif %}"
          class="btn btn-sm {% if filtro_ic == 'correcto' %}btn-success text-white{% else %}btn-outline-success{% endif %} py-1 px-3"
          style="font-size:.76rem; border-radius: 20px;">
         <i class="bi bi-check-circle-fill me-1"></i>Solo Correctos ({{ total_corr }})
       </a>
-      <a href="{% url 'tickets:bandeja' %}?filtro_ic=incorrecto"
+      <a href="{% url 'tickets:bandeja' %}?filtro_ic=incorrecto{% if query_sin_ic %}&{{ query_sin_ic }}{% endif %}"
          class="btn btn-sm {% if filtro_ic == 'incorrecto' %}btn-danger text-white{% else %}btn-outline-danger{% endif %} py-1 px-3"
          style="font-size:.76rem; border-radius: 20px;">
         <i class="bi bi-x-circle-fill me-1"></i>Discrepancias ({{ total_incorr }})

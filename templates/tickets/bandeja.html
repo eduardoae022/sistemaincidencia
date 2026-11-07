@@ -97,13 +97,13 @@
 <div class="card mb-4">
   <div class="card-header">
     <h6 class="mb-0"><i class="bi bi-funnel me-2"></i>Filtros</h6>
-    <a href="{% url 'tickets:bandeja' %}" class="btn btn-sm btn-outline-secondary">Limpiar</a>
+    <a href="{% url 'tickets:bandeja' %}?limpiar=1" class="btn btn-sm btn-outline-secondary">Limpiar</a>
   </div>
   <div class="card-body">
     <form method="get" id="form_filtros"
           hx-get="{% url 'tickets:bandeja' %}"
           hx-target="#tabla-tickets"
-          hx-trigger="change from:select, keyup changed delay:600ms from:input[type=text]"
+          hx-trigger="change from:select, change from:input[type=date], keyup changed delay:600ms from:input[type=text], submit"
           hx-push-url="true">
       <div class="row g-2">
         <div class="col-md-2">{{ form.estado }}</div>

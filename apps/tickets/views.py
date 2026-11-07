@@ -3,6 +3,7 @@ Vistas para el módulo de tickets.
 Toda transición de estado pasa por TicketStateMachine.
 """
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -44,6 +45,24 @@ def _get_queryset_por_rol(user):
 @login_required
 def bandeja(request):
     """Vista principal de bandeja — filtrable por estado, prioridad, categoría, etc."""
+    # 1. Si el usuario solicita limpiar filtros explícitamente
+    if request.GET.get('limpiar') == '1':
+        request.session.pop('filtros_bandeja', None)
+        return redirect('tickets:bandeja')
+
+    # 2. Si no hay parámetros GET y no es HTMX, restaurar filtros previos de la sesión
+    if not request.GET and not request.htmx:
+        filtros_guardados = request.session.get('filtros_bandeja')
+        if filtros_guardados:
+            return redirect(f"{reverse('tickets:bandeja')}?{filtros_guardados}")
+
+    # 3. Persistir filtros en sesión si hay alguno presente
+    claves_filtro = ['estado', 'prioridad', 'categoria', 'tecnico', 'fecha_desde', 'fecha_hasta', 'buscar', 'filtro_ic']
+    if any(request.GET.get(k) for k in claves_filtro):
+        request.session['filtros_bandeja'] = request.GET.urlencode()
+    elif not request.htmx and 'filtros_bandeja' in request.session:
+        request.session.pop('filtros_bandeja', None)
+
     rol = get_rol_principal(request.user)
     qs = _get_queryset_por_rol(request.user)
     form = TicketFiltroForm(request.GET or None)
@@ -103,6 +122,10 @@ def bandeja(request):
             'es_correcto': es_correcto,
         })
 
+    qd = request.GET.copy()
+    qd.pop('filtro_ic', None)
+    query_sin_ic = qd.urlencode()
+
     context = {
         'tickets_con_sla': tickets_con_sla,
         'form': form,
@@ -113,6 +136,8 @@ def bandeja(request):
         'total_incorr': total_incorr,
         'tcc_global': tcc_global,
         'filtro_ic': filtro_ic,
+        'query_sin_ic': query_sin_ic,
+        'query_string': request.GET.urlencode(),
     }
 
     # Si es una petición HTMX, devolver solo la tabla
