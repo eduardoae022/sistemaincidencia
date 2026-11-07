@@ -235,7 +235,7 @@ def _construir_fila_ticket(t):
     solicitante_str = (t.solicitante.get_full_name() or t.solicitante.username) if (getattr(t, 'solicitante_id', None) and t.solicitante) else ''
     tecnico_str = (t.tecnico_asignado.get_full_name() or t.tecnico_asignado.username) if (getattr(t, 'tecnico_asignado_id', None) and t.tecnico_asignado) else 'Sin asignar'
 
-    codigo_ticket = f"TK-{t.pk:04d}" if t.pk else "TK-PENDIENTE"
+    codigo_ticket = f"TK-{t.pk}" if t.pk else "TK-PENDIENTE"
 
     return {
         # ── 14 Columnas Canónicas de la Tesis (dataset_completo.xlsx) ──

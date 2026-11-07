@@ -181,8 +181,8 @@ class Ticket(models.Model):
 
     @property
     def codigo(self):
-        """Formato visible: TK-0001"""
-        return f'TK-{self.pk:04d}'
+        """Formato visible: TK-1 hasta TK-320"""
+        return f'TK-{self.pk}'
 
     def calcular_horas_transcurridas(self):
         """Horas transcurridas desde el registro hasta ahora (o hasta cierre)"""
