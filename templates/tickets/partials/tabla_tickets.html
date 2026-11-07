@@ -143,7 +143,9 @@
           <td>{{ t.solicitante.get_full_name|default:t.solicitante.username }}</td>
           <td>{{ t.tecnico_asignado.get_full_name|default:"—" }}</td>
           <td>
-            <span class="text-muted" style="font-size:.8rem">{{ item.horas_transcurridas }}h</span>
+            <span class="text-muted" style="font-size:.8rem">
+              <i class="bi bi-clock me-1 text-secondary" style="font-size:.75rem"></i>{{ item.horas_transcurridas|formato_tiempo }}
+            </span>
           </td>
           <td>
             {% if t.dentro_sla is True %}
@@ -157,15 +159,15 @@
             {% elif item.sla_restante is not None %}
               {% if item.sla_restante < 0 %}
                 <span class="badge bg-danger text-white px-2 py-1 fw-semibold" style="font-size:.75rem">
-                  <i class="bi bi-exclamation-triangle-fill me-1"></i>Vencido ({{ item.sla_restante|floatformat:1 }}h)
+                  <i class="bi bi-exclamation-triangle-fill me-1"></i>Vencido ({{ item.sla_restante|formato_tiempo_abs }})
                 </span>
               {% elif item.estado_sla == 'advertencia' %}
                 <span class="badge bg-warning text-dark px-2 py-1 fw-semibold" style="font-size:.75rem">
-                  <i class="bi bi-clock-history me-1"></i>{{ item.sla_restante|floatformat:1 }}h rest.
+                  <i class="bi bi-clock-history me-1"></i>{{ item.sla_restante|formato_tiempo }} rest.
                 </span>
               {% else %}
                 <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fw-semibold" style="font-size:.75rem">
-                  <i class="bi bi-clock me-1"></i>{{ item.sla_restante|floatformat:1 }}h rest.
+                  <i class="bi bi-clock me-1"></i>{{ item.sla_restante|formato_tiempo }} rest.
                 </span>
               {% endif %}
             {% else %}

@@ -99,7 +99,7 @@ def bandeja(request):
             'ticket': t,
             'sla_restante': t.calcular_sla_restante_horas(),
             'estado_sla': t.estado_sla(),
-            'horas_transcurridas': round(t.calcular_horas_transcurridas(), 1),
+            'horas_transcurridas': t.calcular_horas_transcurridas(),
             'es_correcto': es_correcto,
         })
 

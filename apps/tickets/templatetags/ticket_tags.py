@@ -66,6 +66,46 @@ def porcentaje(valor):
         return '0'
 
 
+@register.filter
+def formato_tiempo(valor):
+    """
+    Convierte una cantidad de horas (decimal o float) a formato legible en horas y minutos (60 min = 1h).
+    Ejemplos:
+      2.9  -> "2h 54min" (0.9h * 60 = 54min)
+      0.5  -> "30min"
+      1.0  -> "1h"
+      0.0  -> "0min"
+      None -> "—"
+    """
+    if valor is None:
+        return "—"
+    try:
+        val_float = float(valor)
+        signo = "-" if val_float < 0 else ""
+        total_minutos = int(round(abs(val_float) * 60))
+        h = total_minutos // 60
+        m = total_minutos % 60
+        if h > 0 and m > 0:
+            return f"{signo}{h}h {m}min"
+        elif h > 0:
+            return f"{signo}{h}h"
+        else:
+            return f"{signo}{m}min"
+    except (ValueError, TypeError):
+        return str(valor)
+
+
+@register.filter
+def formato_tiempo_abs(valor):
+    """Retorna formato_tiempo en valor absoluto (sin signo negativo)"""
+    if valor is None:
+        return "—"
+    try:
+        return formato_tiempo(abs(float(valor)))
+    except (ValueError, TypeError):
+        return str(valor)
+
+
 @register.simple_tag
 def get_rol_tag(user):
     """Version simple_tag de get_rol para usar con {% %}"""
