@@ -1,9 +1,28 @@
 {% load ticket_tags %}
 <div class="card">
-  <div class="card-header">
+  <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
     <span class="text-muted" style="font-size:.82rem">
       <strong>{{ total }}</strong> ticket{{ total|pluralize:"s" }} encontrado{{ total|pluralize:"s" }}
     </span>
+
+    <!-- Píldoras de Filtro Rápido para Validación ITIL (Tesis) -->
+    <div class="d-flex align-items-center gap-2">
+      <a href="{% url 'tickets:bandeja' %}"
+         class="btn btn-sm {% if not filtro_ic %}btn-primary{% else %}btn-outline-secondary{% endif %} py-1 px-3"
+         style="font-size:.76rem; border-radius: 20px;">
+        <i class="bi bi-list-ul me-1"></i>Todos ({{ total }})
+      </a>
+      <a href="{% url 'tickets:bandeja' %}?filtro_ic=correcto"
+         class="btn btn-sm {% if filtro_ic == 'correcto' %}btn-success text-white{% else %}btn-outline-success{% endif %} py-1 px-3"
+         style="font-size:.76rem; border-radius: 20px;">
+        <i class="bi bi-check-circle-fill me-1"></i>Solo Correctos ({{ total_corr }})
+      </a>
+      <a href="{% url 'tickets:bandeja' %}?filtro_ic=incorrecto"
+         class="btn btn-sm {% if filtro_ic == 'incorrecto' %}btn-danger text-white{% else %}btn-outline-danger{% endif %} py-1 px-3"
+         style="font-size:.76rem; border-radius: 20px;">
+        <i class="bi bi-x-circle-fill me-1"></i>Discrepancias ({{ total_incorr }})
+      </a>
+    </div>
   </div>
   <div class="table-container">
     <table class="table table-hover" id="tabla_tickets_main">
@@ -12,9 +31,11 @@
           <th>Código</th>
           <th>Estado</th>
           <th>Prioridad Operador</th>
+          <th>Prioridad ITIL</th>
+          <th class="text-center">Resultado ITIL</th>
           <th>Sugerencia ML</th>
           <th>Confianza ML</th>
-          <th>¿Aceptó ML?</th>
+          <th class="text-center">¿Aceptó ML?</th>
           <th>Categoría</th>
           <th>Descripción</th>
           <th>Solicitante</th>
@@ -52,6 +73,31 @@
             </span>
             {% else %}
             <span class="text-muted" style="font-size:.78rem">Sin clasificar</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if t.prioridad_correcta %}
+            <span class="badge-prioridad {{ t.prioridad_correcta|prioridad_css }}">
+              {% if t.prioridad_correcta == 'Alta' %}<i class="bi bi-shield-fill-check"></i>
+              {% elif t.prioridad_correcta == 'Media' %}<i class="bi bi-shield-check"></i>
+              {% else %}<i class="bi bi-shield"></i>{% endif %}
+              {{ t.prioridad_correcta }}
+            </span>
+            {% else %}
+            <span class="text-muted" style="font-size:.78rem">—</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if item.es_correcto is True %}
+              <span class="badge bg-success text-white px-2 py-1 shadow-sm" style="font-size:.75rem" title="Prioridad del operador coincide con el estándar ITIL">
+                <i class="bi bi-check-circle-fill me-1"></i>Correcto
+              </span>
+            {% elif item.es_correcto is False %}
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1" style="font-size:.75rem" title="Discrepancia frente a la prioridad correcta ITIL">
+                <i class="bi bi-x-circle-fill me-1"></i>Incorrecto
+              </span>
+            {% else %}
+              <span class="text-muted" style="font-size:.78rem">—</span>
             {% endif %}
           </td>
           <td>

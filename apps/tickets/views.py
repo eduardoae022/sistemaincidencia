@@ -73,16 +73,34 @@ def bandeja(request):
                 Q(pk__icontains=buscar.replace('TK-', '').replace('tk-', '').strip())
             )
 
+    # Filtro rápido de Clasificación Correcta (IC) para la tesis
+    filtro_ic = request.GET.get('filtro_ic', '').strip().lower()
+    if filtro_ic == 'correcto':
+        qs = qs.filter(prioridad_operador=F('prioridad_correcta')).exclude(prioridad_correcta__isnull=True)
+    elif filtro_ic == 'incorrecto':
+        qs = qs.exclude(prioridad_operador=F('prioridad_correcta')).exclude(prioridad_correcta__isnull=True)
+
     tickets = qs.order_by('-fecha_hora_registro')
 
-    # Calcular métricas SLA para cada ticket (sin websockets, recalculado en carga)
+    # Métricas globales de Clasificación Correcta (TCC)
+    base_qs = _get_queryset_por_rol(request.user)
+    total_eval = base_qs.exclude(prioridad_correcta__isnull=True).exclude(prioridad_operador__isnull=True).count()
+    total_corr = base_qs.filter(prioridad_operador=F('prioridad_correcta')).exclude(prioridad_correcta__isnull=True).count()
+    total_incorr = total_eval - total_corr
+    tcc_global = round((total_corr / total_eval * 100), 1) if total_eval > 0 else 0
+
+    # Calcular métricas SLA y verificación de acierto ITIL para cada ticket
     tickets_con_sla = []
     for t in tickets:
+        es_correcto = None
+        if t.prioridad_operador and t.prioridad_correcta:
+            es_correcto = (t.prioridad_operador == t.prioridad_correcta)
         tickets_con_sla.append({
             'ticket': t,
             'sla_restante': t.calcular_sla_restante_horas(),
             'estado_sla': t.estado_sla(),
             'horas_transcurridas': round(t.calcular_horas_transcurridas(), 1),
+            'es_correcto': es_correcto,
         })
 
     context = {
@@ -90,6 +108,11 @@ def bandeja(request):
         'form': form,
         'rol': rol,
         'total': len(tickets_con_sla),
+        'total_eval': total_eval,
+        'total_corr': total_corr,
+        'total_incorr': total_incorr,
+        'tcc_global': tcc_global,
+        'filtro_ic': filtro_ic,
     }
 
     # Si es una petición HTMX, devolver solo la tabla
