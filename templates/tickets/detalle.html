@@ -114,20 +114,222 @@
 
           {% if tiene_sugerencia_ia %}
           <div class="col-12">
-            <div class="alert alert-info d-flex align-items-center gap-2 py-2 mb-0" style="font-size:.88rem;">
-              <i class="bi bi-robot fs-5"></i>
-              <div>
-                <strong>Sugerencia IA asignada:</strong>
-                <span class="badge-prioridad {{ ticket.prioridad_modelo|prioridad_css }} mx-1">{{ ticket.prioridad_modelo }}</span>
-                con <strong>{{ ticket.confianza_modelo|porcentaje }}%</strong> de confianza
-                {% if ticket.siguio_sugerencia_ia is not None %}
-                  —
-                  {% if ticket.siguio_sugerencia_ia %}
-                    <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Operador aceptó la sugerencia</span>
-                  {% else %}
-                    <span class="text-secondary"><i class="bi bi-x-circle-fill me-1"></i>Operador asignó prioridad distinta</span>
+            <div class="alert alert-info d-flex align-items-center justify-content-between py-2 px-3 mb-0" style="font-size:.88rem;">
+              <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-robot fs-5 text-primary"></i>
+                <div>
+                  <strong>Sugerencia IA asignada:</strong>
+                  <span class="badge-prioridad {{ ticket.prioridad_modelo|prioridad_css }} mx-1">{{ ticket.prioridad_modelo }}</span>
+                  con <strong>{{ ticket.confianza_modelo|porcentaje }}%</strong> de confianza
+                  {% if ticket.siguio_sugerencia_ia is not None %}
+                    —
+                    {% if ticket.siguio_sugerencia_ia %}
+                      <span class="text-success fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Operador aceptó la sugerencia</span>
+                    {% else %}
+                      <span class="text-secondary"><i class="bi bi-x-circle-fill me-1"></i>Operador asignó prioridad distinta</span>
+                    {% endif %}
                   {% endif %}
-                {% endif %}
+                </div>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalExplicacionSugerenciaAsignada">
+                <i class="bi bi-diagram-3-fill me-1"></i>Ver análisis ITIL
+              </button>
+            </div>
+          </div>
+
+          <!-- Modal de Análisis ITIL para Ticket ya Clasificado -->
+          <div class="modal fade" id="modalExplicacionSugerenciaAsignada" tabindex="-1" aria-labelledby="modalExplicacionSugerenciaAsignadaLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+              <div class="modal-content shadow border-0">
+                <div class="modal-header bg-primary text-white py-3">
+                  <h5 class="modal-title fs-6 d-flex align-items-center gap-2 mb-0" id="modalExplicacionSugerenciaAsignadaLabel">
+                    <i class="bi bi-robot fs-5"></i>
+                    Análisis ITIL y Fundamento de Machine Learning
+                  </h5>
+                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body p-4">
+                  <!-- Tarjeta destacada -->
+                  <div class="p-3 mb-3 rounded-3 border" style="background:#f8f9fa;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                      <span class="text-muted text-uppercase fw-semibold" style="font-size:.75rem; letter-spacing:.05em;">Prioridad asignada por el modelo</span>
+                      <span class="badge bg-secondary" style="font-size:.75rem;">Modelo: Support Vector Machine (SVM) - ITIL</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                      <span class="badge-prioridad {{ ticket.prioridad_modelo|prioridad_css }} fs-5 px-3 py-1">
+                        {{ ticket.prioridad_modelo }}
+                      </span>
+                      <span class="text-dark" style="font-size:.95rem;">
+                        Nivel de certeza: <strong>{{ ticket.confianza_modelo|porcentaje }}%</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Evaluación según Matriz ITIL: Impacto y Urgencia -->
+                  <div class="mb-3">
+                    <h6 class="fw-bold text-secondary mb-2" style="font-size:.82rem; text-transform:uppercase; letter-spacing:.05em;">
+                      <i class="bi bi-diagram-3-fill me-1 text-primary"></i>Evaluación de Criterios ITIL (Impacto × Urgencia)
+                    </h6>
+                    <div class="row g-2 mb-3">
+                      <div class="col-md-6">
+                        <div class="p-3 rounded border bg-light h-100">
+                          <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-uppercase fw-bold text-secondary" style="font-size:.75rem;">Impacto Detectado</span>
+                            {% if ticket.prioridad_modelo == 'Alta' %}
+                              <span class="badge bg-danger">Alto</span>
+                            {% elif ticket.prioridad_modelo == 'Media' %}
+                              <span class="badge bg-warning text-dark">Medio</span>
+                            {% else %}
+                              <span class="badge bg-success">Bajo</span>
+                            {% endif %}
+                          </div>
+                          <p class="mb-1 fw-semibold text-dark" style="font-size:.85rem;">
+                            {% if ticket.prioridad_modelo == 'Alta' %}
+                              Todo el Sistema / Unidad de Negocio
+                            {% elif ticket.prioridad_modelo == 'Media' %}
+                              Múltiples Usuarios / Área Operativa
+                            {% else %}
+                              Usuario Único / Puesto Puntual
+                            {% endif %}
+                          </p>
+                          <small class="text-muted d-block" style="line-height:1.4;">
+                            {% if ticket.prioridad_modelo == 'Alta' %}
+                              Afectación crítica en el servicio <strong>{{ ticket.servicio_afectado.nombre }}</strong> con alcance a múltiples departamentos o parálisis del flujo comercial en URBINMOBILIARIA S.A.C.
+                            {% elif ticket.prioridad_modelo == 'Media' %}
+                              Afectación compartida o lentitud en <strong>{{ ticket.servicio_afectado.nombre }}</strong> que degrada las funciones sin provocar inoperatividad total de la sede.
+                            {% else %}
+                              Incidencia focalizada en un solo equipo o solicitud de configuración rutinaria sin afectación masiva de la operación.
+                            {% endif %}
+                          </small>
+                        </div>
+                      </div>
+
+                      <div class="col-md-6">
+                        <div class="p-3 rounded border bg-light h-100">
+                          <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-uppercase fw-bold text-secondary" style="font-size:.75rem;">Urgencia Detectada</span>
+                            {% if ticket.prioridad_modelo == 'Alta' %}
+                              <span class="badge bg-danger">Alta</span>
+                            {% elif ticket.prioridad_modelo == 'Media' %}
+                              <span class="badge bg-warning text-dark">Media</span>
+                            {% else %}
+                              <span class="badge bg-success">Baja</span>
+                            {% endif %}
+                          </div>
+                          <p class="mb-1 fw-semibold text-dark" style="font-size:.85rem;">
+                            {% if ticket.prioridad_modelo == 'Alta' %}
+                              Ya no puede realizar sus funciones laborales principales
+                            {% elif ticket.prioridad_modelo == 'Media' %}
+                              Funciones de trabajo deterioradas (existe solución alternativa)
+                            {% else %}
+                              Inconveniente menor / Sin impedimento de funciones
+                            {% endif %}
+                          </p>
+                          <small class="text-muted d-block" style="line-height:1.4;">
+                            {% if ticket.prioridad_modelo == 'Alta' %}
+                              Interrupción crítica en la continuidad del trabajo; requiere intervención técnica prioritaria dentro de <strong>4 horas (SLA)</strong>.
+                            {% elif ticket.prioridad_modelo == 'Media' %}
+                              El colaborador puede continuar actividades con demoras o soluciones temporales. SLA de atención fijado en <strong>8 horas</strong>.
+                            {% else %}
+                              Duda, consulta o ajuste no bloqueante. SLA estándar de atención fijado en <strong>24 horas</strong>.
+                            {% endif %}
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Representación Gráfica de la Matriz de Prioridades de Incidentes (InvGate ITIL) -->
+                    <div class="p-3 rounded border bg-white">
+                      <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="fw-bold text-dark" style="font-size:.80rem;">
+                          <i class="bi bi-grid-3x3-gap-fill me-1 text-primary"></i>Matriz de Prioridades de Incidentes (Marco ITIL)
+                        </span>
+                        <span class="badge bg-light text-secondary border" style="font-size:.70rem;">Estándar InvGate ITIL</span>
+                      </div>
+                      <div class="table-responsive">
+                        <table class="table table-bordered table-sm text-center mb-0" style="font-size:.76rem;">
+                          <thead>
+                            <tr class="table-light">
+                              <th class="align-middle bg-light text-muted" style="width:25%;">Urgencia \ Impacto</th>
+                              <th class="text-danger fw-bold" style="width:25%; background:#fee2e2;">Alto<br><span class="fw-normal" style="font-size:.68rem;">Todo el Sistema</span></th>
+                              <th class="text-warning-emphasis fw-bold" style="width:25%; background:#fef3c7;">Medio<br><span class="fw-normal" style="font-size:.68rem;">Múltiples usuarios</span></th>
+                              <th class="text-success fw-bold" style="width:25%; background:#dcfce7;">Bajo<br><span class="fw-normal" style="font-size:.68rem;">Usuario único</span></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <th class="table-light text-start ps-2">
+                                <span class="badge bg-danger me-1">Alto</span><br>
+                                <span class="text-muted fw-normal" style="font-size:.68rem;">Paralización de funciones</span>
+                              </th>
+                              <td class="{% if ticket.prioridad_modelo == 'Alta' %}table-danger border-3 border-danger fw-bold text-danger fs-6{% else %}bg-danger bg-opacity-10 text-danger{% endif %}">
+                                Crítico (Alta){% if ticket.prioridad_modelo == 'Alta' %}&nbsp;🎯{% endif %}
+                              </td>
+                              <td class="bg-danger bg-opacity-10 text-danger">Alto (Alta)</td>
+                              <td class="bg-warning bg-opacity-10 text-warning-emphasis">Moderado (Media)</td>
+                            </tr>
+                            <tr>
+                              <th class="table-light text-start ps-2">
+                                <span class="badge bg-warning text-dark me-1">Media</span><br>
+                                <span class="text-muted fw-normal" style="font-size:.68rem;">Funciones deterioradas</span>
+                              </th>
+                              <td class="bg-danger bg-opacity-10 text-danger">Alto (Alta)</td>
+                              <td class="{% if ticket.prioridad_modelo == 'Media' %}table-warning border-3 border-warning fw-bold text-dark fs-6{% else %}bg-warning bg-opacity-10 text-warning-emphasis{% endif %}">
+                                Moderado (Media){% if ticket.prioridad_modelo == 'Media' %}&nbsp;🎯{% endif %}
+                              </td>
+                              <td class="bg-success bg-opacity-10 text-success">Bajo (Baja)</td>
+                            </tr>
+                            <tr>
+                              <th class="table-light text-start ps-2">
+                                <span class="badge bg-success me-1">Baja</span><br>
+                                <span class="text-muted fw-normal" style="font-size:.68rem;">Inconveniente menor</span>
+                              </th>
+                              <td class="bg-warning bg-opacity-10 text-warning-emphasis">Moderado (Media)</td>
+                              <td class="bg-success bg-opacity-10 text-success">Bajo (Baja)</td>
+                              <td class="{% if ticket.prioridad_modelo == 'Baja' %}table-success border-3 border-success fw-bold text-success fs-6{% else %}bg-success bg-opacity-10 text-success{% endif %}">
+                                Bajo (Baja){% if ticket.prioridad_modelo == 'Baja' %}&nbsp;🎯{% endif %}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Motivos del análisis -->
+                  <div class="mb-3">
+                    <h6 class="fw-bold text-secondary mb-2" style="font-size:.82rem; text-transform:uppercase; letter-spacing:.05em;">
+                      <i class="bi bi-card-checklist me-1 text-primary"></i>Motivos del análisis
+                    </h6>
+                    <div class="bg-light p-3 rounded border" style="font-size:.88rem; line-height:1.5;">
+                      {% if ticket.prioridad_modelo == 'Alta' %}
+                        <p class="mb-2">
+                          El algoritmo Support Vector Machine (SVM) determinó prioridad <strong>Alta</strong> debido a que la descripción del ticket presenta patrones de <strong>Impacto Alto</strong> (afectación directa a {{ ticket.servicio_afectado.nombre }}) y una <strong>Urgencia Alta</strong> (los colaboradores no pueden llevar a cabo sus funciones laborales principales). Siguiendo la Matriz ITIL, el cruce de ambos factores ubica la incidencia en nivel <strong>Crítico (Prioridad Alta)</strong>.
+                        </p>
+                      {% elif ticket.prioridad_modelo == 'Media' %}
+                        <p class="mb-2">
+                          El algoritmo Support Vector Machine (SVM) determinó prioridad <strong>Media</strong> debido a que la incidencia evidencia un <strong>Impacto Medio</strong> (múltiples usuarios afectados en {{ ticket.servicio_afectado.nombre }}) con una <strong>Urgencia Media</strong> (funciones deterioradas pero con soluciones alternativas viables). Según la Matriz ITIL, este cruce corresponde al nivel <strong>Moderado (Prioridad Media)</strong>.
+                        </p>
+                      {% else %}
+                        <p class="mb-2">
+                          El algoritmo Support Vector Machine (SVM) determinó prioridad <strong>Baja</strong> debido a que el incidente registra un <strong>Impacto Bajo</strong> (usuario individual en {{ ticket.servicio_afectado.nombre }}) y una <strong>Urgencia Baja</strong> (inconveniente no bloqueante o consulta de configuración). Conforme a la Matriz ITIL, el cruce de ambos factores sitúa la incidencia en nivel <strong>Bajo (Prioridad Baja)</strong>.
+                        </p>
+                      {% endif %}
+
+                      <div class="pt-2 border-top text-muted" style="font-size:.82rem;">
+                        <strong>Variables analizadas por el modelo:</strong>
+                        <div class="row g-2 mt-1">
+                          <div class="col-sm-6"><span class="fw-semibold text-dark">Categoría:</span> {{ ticket.categoria.nombre }}</div>
+                          <div class="col-sm-6"><span class="fw-semibold text-dark">Servicio afectado:</span> {{ ticket.servicio_afectado.nombre }}</div>
+                          <div class="col-12"><span class="fw-semibold text-dark">Descripción analizada:</span> <span class="fst-italic text-secondary">"{{ ticket.descripcion|truncatewords:25 }}"</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                  <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+                </div>
               </div>
             </div>
           </div>
@@ -192,7 +394,7 @@
                 <div class="p-3 mb-3 rounded-3 border" style="background:#f8f9fa;">
                   <div class="d-flex align-items-center justify-content-between mb-2">
                     <span class="text-muted text-uppercase fw-semibold" style="font-size:.75rem; letter-spacing:.05em;">Prioridad recomendada por el modelo</span>
-                    <span class="badge bg-secondary" style="font-size:.75rem;">Modelo: {{ sugerencia_previa.version_modelo|default:"Random Forest (Optimizado)" }}</span>
+                    <span class="badge bg-secondary" style="font-size:.75rem;">Modelo: {{ sugerencia_previa.version_modelo|default:"Support Vector Machine (SVM) - ITIL" }}</span>
                   </div>
                   <div class="d-flex align-items-center gap-3">
                     <span class="badge-prioridad {{ sugerencia_previa.prioridad_predicha|prioridad_css }} fs-5 px-3 py-1">
@@ -204,7 +406,138 @@
                   </div>
                 </div>
 
-                <!-- Motivos y detalles del análisis -->
+                <!-- Evaluación según Matriz ITIL: Impacto y Urgencia -->
+                <div class="mb-3">
+                  <h6 class="fw-bold text-secondary mb-2" style="font-size:.82rem; text-transform:uppercase; letter-spacing:.05em;">
+                    <i class="bi bi-diagram-3-fill me-1 text-primary"></i>Evaluación de Criterios ITIL (Impacto × Urgencia)
+                  </h6>
+                  <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                      <div class="p-3 rounded border bg-light h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                          <span class="text-uppercase fw-bold text-secondary" style="font-size:.75rem;">Impacto Detectado</span>
+                          {% if sugerencia_previa.prioridad_predicha == 'Alta' %}
+                            <span class="badge bg-danger">Alto</span>
+                          {% elif sugerencia_previa.prioridad_predicha == 'Media' %}
+                            <span class="badge bg-warning text-dark">Medio</span>
+                          {% else %}
+                            <span class="badge bg-success">Bajo</span>
+                          {% endif %}
+                        </div>
+                        <p class="mb-1 fw-semibold text-dark" style="font-size:.85rem;">
+                          {% if sugerencia_previa.prioridad_predicha == 'Alta' %}
+                            Todo el Sistema / Unidad de Negocio
+                          {% elif sugerencia_previa.prioridad_predicha == 'Media' %}
+                            Múltiples Usuarios / Área Operativa
+                          {% else %}
+                            Usuario Único / Puesto Puntual
+                          {% endif %}
+                        </p>
+                        <small class="text-muted d-block" style="line-height:1.4;">
+                          {% if sugerencia_previa.prioridad_predicha == 'Alta' %}
+                            Afectación crítica en el servicio <strong>{{ ticket.servicio_afectado.nombre }}</strong> con alcance departamental o parálisis de la operación en URBINMOBILIARIA S.A.C.
+                          {% elif sugerencia_previa.prioridad_predicha == 'Media' %}
+                            Afectación compartida o lentitud en <strong>{{ ticket.servicio_afectado.nombre }}</strong> que degrada las funciones sin provocar inoperatividad total del sistema.
+                          {% else %}
+                            Incidencia focalizada en un único colaborador o solicitud rutinaria sin degradación masiva de los servicios empresariales.
+                          {% endif %}
+                        </small>
+                      </div>
+                    </div>
+
+                    <div class="col-md-6">
+                      <div class="p-3 rounded border bg-light h-100">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                          <span class="text-uppercase fw-bold text-secondary" style="font-size:.75rem;">Urgencia Detectada</span>
+                          {% if sugerencia_previa.prioridad_predicha == 'Alta' %}
+                            <span class="badge bg-danger">Alta</span>
+                          {% elif sugerencia_previa.prioridad_predicha == 'Media' %}
+                            <span class="badge bg-warning text-dark">Media</span>
+                          {% else %}
+                            <span class="badge bg-success">Baja</span>
+                          {% endif %}
+                        </div>
+                        <p class="mb-1 fw-semibold text-dark" style="font-size:.85rem;">
+                          {% if sugerencia_previa.prioridad_predicha == 'Alta' %}
+                            Ya no puede realizar sus funciones laborales principales
+                          {% elif sugerencia_previa.prioridad_predicha == 'Media' %}
+                            Funciones de trabajo deterioradas (existe solución alternativa)
+                          {% else %}
+                            Inconveniente menor / Sin impedimento de funciones
+                          {% endif %}
+                        </p>
+                        <small class="text-muted d-block" style="line-height:1.4;">
+                          {% if sugerencia_previa.prioridad_predicha == 'Alta' %}
+                            Interrupción severa del flujo operativo; requiere primera atención técnica inmediata dentro de <strong>4 horas (SLA)</strong>.
+                          {% elif sugerencia_previa.prioridad_predicha == 'Media' %}
+                            El colaborador experimenta degradación operativa pero cuenta con alternativas. SLA de atención fijado en <strong>8 horas</strong>.
+                          {% else %}
+                            Consulta o ajuste rutinario sin bloqueo de actividades diarias. SLA estándar de atención fijado en <strong>24 horas</strong>.
+                          {% endif %}
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Representación Gráfica de la Matriz de Prioridades de Incidentes (InvGate ITIL) -->
+                  <div class="p-3 rounded border bg-white mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                      <span class="fw-bold text-dark" style="font-size:.80rem;">
+                        <i class="bi bi-grid-3x3-gap-fill me-1 text-primary"></i>Matriz de Prioridades de Incidentes (Marco ITIL)
+                      </span>
+                      <span class="badge bg-light text-secondary border" style="font-size:.70rem;">Estándar InvGate ITIL</span>
+                    </div>
+                    <div class="table-responsive">
+                      <table class="table table-bordered table-sm text-center mb-0" style="font-size:.76rem;">
+                        <thead>
+                          <tr class="table-light">
+                            <th class="align-middle bg-light text-muted" style="width:25%;">Urgencia \ Impacto</th>
+                            <th class="text-danger fw-bold" style="width:25%; background:#fee2e2;">Alto<br><span class="fw-normal" style="font-size:.68rem;">Todo el Sistema</span></th>
+                            <th class="text-warning-emphasis fw-bold" style="width:25%; background:#fef3c7;">Medio<br><span class="fw-normal" style="font-size:.68rem;">Múltiples usuarios</span></th>
+                            <th class="text-success fw-bold" style="width:25%; background:#dcfce7;">Bajo<br><span class="fw-normal" style="font-size:.68rem;">Usuario único</span></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <th class="table-light text-start ps-2">
+                              <span class="badge bg-danger me-1">Alto</span><br>
+                              <span class="text-muted fw-normal" style="font-size:.68rem;">Paralización de funciones</span>
+                            </th>
+                            <td class="{% if sugerencia_previa.prioridad_predicha == 'Alta' %}table-danger border-3 border-danger fw-bold text-danger fs-6{% else %}bg-danger bg-opacity-10 text-danger{% endif %}">
+                              Crítico (Alta){% if sugerencia_previa.prioridad_predicha == 'Alta' %}&nbsp;🎯{% endif %}
+                            </td>
+                            <td class="bg-danger bg-opacity-10 text-danger">Alto (Alta)</td>
+                            <td class="bg-warning bg-opacity-10 text-warning-emphasis">Moderado (Media)</td>
+                          </tr>
+                          <tr>
+                            <th class="table-light text-start ps-2">
+                              <span class="badge bg-warning text-dark me-1">Media</span><br>
+                              <span class="text-muted fw-normal" style="font-size:.68rem;">Funciones deterioradas</span>
+                            </th>
+                            <td class="bg-danger bg-opacity-10 text-danger">Alto (Alta)</td>
+                            <td class="{% if sugerencia_previa.prioridad_predicha == 'Media' %}table-warning border-3 border-warning fw-bold text-dark fs-6{% else %}bg-warning bg-opacity-10 text-warning-emphasis{% endif %}">
+                              Moderado (Media){% if sugerencia_previa.prioridad_predicha == 'Media' %}&nbsp;🎯{% endif %}
+                            </td>
+                            <td class="bg-success bg-opacity-10 text-success">Bajo (Baja)</td>
+                          </tr>
+                          <tr>
+                            <th class="table-light text-start ps-2">
+                              <span class="badge bg-success me-1">Baja</span><br>
+                              <span class="text-muted fw-normal" style="font-size:.68rem;">Inconveniente menor</span>
+                            </th>
+                            <td class="bg-warning bg-opacity-10 text-warning-emphasis">Moderado (Media)</td>
+                            <td class="bg-success bg-opacity-10 text-success">Bajo (Baja)</td>
+                            <td class="{% if sugerencia_previa.prioridad_predicha == 'Baja' %}table-success border-3 border-success fw-bold text-success fs-6{% else %}bg-success bg-opacity-10 text-success{% endif %}">
+                              Bajo (Baja){% if sugerencia_previa.prioridad_predicha == 'Baja' %}&nbsp;🎯{% endif %}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Motivos del análisis -->
                 <div class="mb-3">
                   <h6 class="fw-bold text-secondary mb-2" style="font-size:.82rem; text-transform:uppercase; letter-spacing:.05em;">
                     <i class="bi bi-card-checklist me-1 text-primary"></i>Motivos del análisis
@@ -212,20 +545,20 @@
                   <div class="bg-light p-3 rounded border" style="font-size:.88rem; line-height:1.5;">
                     {% if sugerencia_previa.prioridad_predicha == 'Alta' %}
                       <p class="mb-2">
-                        El modelo identificó una alta criticidad operativa en la incidencia debido a términos que refieren indisponibilidad, interrupción del servicio o afectación masiva de usuarios en <strong>{{ ticket.servicio_afectado.nombre }}</strong>, correlacionándose con eventos de prioridad <strong>Alta</strong> según los estándares ITIL y el histórico entrenado.
+                        El algoritmo Support Vector Machine (SVM) determinó prioridad <strong>Alta</strong> al detectar en la descripción patrones léxicos de <strong>Impacto Alto</strong> (afectación directa a {{ ticket.servicio_afectado.nombre }}) y una <strong>Urgencia Alta</strong> (los colaboradores no pueden llevar a cabo sus funciones laborales principales). Conforme a la Matriz ITIL de la empresa, el cruce de ambos factores ubica la incidencia en nivel <strong>Crítico (Prioridad Alta)</strong>.
                       </p>
                     {% elif sugerencia_previa.prioridad_predicha == 'Media' %}
                       <p class="mb-2">
-                        El modelo determinó prioridad <strong>Media</strong> ya que la incidencia presenta degradación, lentitud o fallo parcial en <strong>{{ ticket.servicio_afectado.nombre }}</strong> que afecta las funciones habituales pero cuenta con alternativas o no detiene la totalidad del servicio.
+                        El algoritmo Support Vector Machine (SVM) determinó prioridad <strong>Media</strong> al identificar un <strong>Impacto Medio</strong> (múltiples usuarios afectados en {{ ticket.servicio_afectado.nombre }}) con una <strong>Urgencia Media</strong> (funciones deterioradas pero con soluciones alternativas viables). Según la Matriz ITIL, este cruce corresponde al nivel <strong>Moderado (Prioridad Media)</strong>.
                       </p>
                     {% else %}
                       <p class="mb-2">
-                        El modelo determinó prioridad <strong>Baja</strong> dado que se detectaron solicitudes rutinarias de configuración, dudas o incidencias menores sobre <strong>{{ ticket.servicio_afectado.nombre }}</strong> sin impacto severo en la continuidad operativa.
+                        El algoritmo Support Vector Machine (SVM) determinó prioridad <strong>Baja</strong> debido a que el incidente registra un <strong>Impacto Bajo</strong> (usuario individual en {{ ticket.servicio_afectado.nombre }}) y una <strong>Urgencia Baja</strong> (inconveniente no bloqueante o consulta de configuración). Conforme a la Matriz ITIL, el cruce de ambos factores sitúa la incidencia en nivel <strong>Bajo (Prioridad Baja)</strong>.
                       </p>
                     {% endif %}
 
                     <div class="pt-2 border-top text-muted" style="font-size:.82rem;">
-                      <strong>Variables analizadas:</strong>
+                      <strong>Variables analizadas por el modelo:</strong>
                       <div class="row g-2 mt-1">
                         <div class="col-sm-6">
                           <span class="fw-semibold text-dark">Categoría:</span> {{ ticket.categoria.nombre }}
