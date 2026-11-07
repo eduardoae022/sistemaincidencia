@@ -85,8 +85,8 @@
   <div class="col-md-3 col-sm-6">
     <div class="kpi-card kpi-info hover-lift">
       <div class="kpi-label">TPA Promedio (Alta prioridad)</div>
-      <div class="kpi-value">
-        {% if kpis.tpa_por_prioridad.Alta is not None %}{{ kpis.tpa_por_prioridad.Alta }}h{% else %}—{% endif %}
+      <div class="kpi-value" title="{% if kpis.tpa_por_prioridad.Alta is not None %}{{ kpis.tpa_por_prioridad.Alta|floatformat:2 }}h{% endif %}">
+        {% if kpis.tpa_por_prioridad.Alta is not None %}{{ kpis.tpa_por_prioridad.Alta|formato_tiempo }}{% else %}—{% endif %}
       </div>
       <div class="kpi-sub">Tiempo hasta primera atención</div>
     </div>
@@ -102,7 +102,9 @@
         {% for p, val in kpis.tpa_por_prioridad.items %}
         <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
           <span class="badge-prioridad {{ p|prioridad_css }}">{{ p }}</span>
-          <strong>{% if val is not None %}{{ val }}h{% else %}Sin datos{% endif %}</strong>
+          <strong title="{% if val is not None %}{{ val|floatformat:2 }}h{% endif %}">
+            {% if val is not None %}{{ val|formato_tiempo }}{% else %}Sin datos{% endif %}
+          </strong>
         </div>
         {% endfor %}
       </div>

@@ -70,7 +70,7 @@ def _calcular_kpis(qs):
             if t.fecha_hora_primera_atencion and t.fecha_hora_registro:
                 delta = t.fecha_hora_primera_atencion - t.fecha_hora_registro
                 tpa_lista.append(delta.total_seconds() / 3600)
-        tpa_por_prioridad[prioridad] = round(sum(tpa_lista) / len(tpa_lista), 2) if tpa_lista else None
+        tpa_por_prioridad[prioridad] = (sum(tpa_lista) / len(tpa_lista)) if tpa_lista else None
 
     # ── TAO: Tasa de Atención Oportuna ──────────────────────────────────────
     # Tickets cerrados/resueltos
