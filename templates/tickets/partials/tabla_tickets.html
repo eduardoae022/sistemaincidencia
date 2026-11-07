@@ -40,7 +40,7 @@
           <th>Descripción</th>
           <th>Solicitante</th>
           <th>Técnico</th>
-          <th>Tiempo</th>
+          <th>Tiempo (h)</th>
           <th>SLA</th>
           <th>Registrado</th>
           <th></th>
@@ -143,9 +143,12 @@
           <td>{{ t.solicitante.get_full_name|default:t.solicitante.username }}</td>
           <td>{{ t.tecnico_asignado.get_full_name|default:"—" }}</td>
           <td>
-            <span class="text-muted" style="font-size:.8rem">
-              <i class="bi bi-clock me-1 text-secondary" style="font-size:.75rem"></i>{{ item.horas_transcurridas|formato_tiempo }}
-            </span>
+            <div class="fw-semibold text-dark" style="font-size:.82rem;">
+              {{ item.horas_transcurridas|floatformat:2 }}h
+            </div>
+            <div class="text-muted" style="font-size:.72rem;">
+              <i class="bi bi-clock me-1 text-secondary" style="font-size:.68rem"></i>{{ item.horas_transcurridas|formato_tiempo }}
+            </div>
           </td>
           <td>
             {% if t.dentro_sla is True %}

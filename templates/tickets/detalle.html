@@ -39,9 +39,9 @@
         <strong>SLA</strong>
       </span>
       {% if sla_restante < 0 %}
-        <span class="text-danger fw-bold">Vencido hace {{ sla_restante|formato_tiempo_abs }}</span>
+        <span class="text-danger fw-bold">Vencido hace {{ sla_restante|floatformat:2|slice:"1:" }}h ({{ sla_restante|formato_tiempo_abs }})</span>
       {% else %}
-        <span>{{ sla_restante|formato_tiempo }} restantes</span>
+        <span>{{ sla_restante|floatformat:2 }}h restantes ({{ sla_restante|formato_tiempo }})</span>
       {% endif %}
     </div>
   </div>
@@ -95,7 +95,7 @@
             <div class="font-semibold">
               {{ ticket.fecha_hora_primera_atencion|date:"d/m/Y H:i" }}
               {% if tpa_horas is not None %}
-              <span class="text-muted" style="font-size:.78rem">({{ tpa_horas|formato_tiempo }} desde el registro)</span>
+              <span class="text-muted" style="font-size:.78rem">({{ tpa_horas|floatformat:2 }}h — {{ tpa_horas|formato_tiempo }} desde el registro)</span>
               {% endif %}
             </div>
           </div>
