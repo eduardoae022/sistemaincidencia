@@ -36,11 +36,23 @@
         <strong>SLA</strong>
       </span>
       {% if sla_restante < 0 %}
-        <span>Vencido hace {{ sla_restante|floatformat:1|slice:"1:" }}h</span>
+        <span class="text-danger fw-bold">Vencido hace {{ sla_restante|floatformat:1|slice:"1:" }}h</span>
       {% else %}
         <span>{{ sla_restante|floatformat:1 }}h restantes</span>
       {% endif %}
     </div>
+  </div>
+  {% elif ticket.dentro_sla is not None %}
+  <div class="text-end">
+    {% if ticket.dentro_sla %}
+      <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fw-semibold" style="font-size:.85rem;">
+        <i class="bi bi-check-circle-fill me-1"></i>Dentro del SLA
+      </span>
+    {% else %}
+      <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 fw-semibold" style="font-size:.85rem;">
+        <i class="bi bi-x-circle-fill me-1"></i>Fuera del SLA
+      </span>
+    {% endif %}
   </div>
   {% endif %}
 </div>

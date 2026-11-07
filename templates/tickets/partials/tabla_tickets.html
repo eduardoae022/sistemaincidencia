@@ -146,20 +146,28 @@
             <span class="text-muted" style="font-size:.8rem">{{ item.horas_transcurridas }}h</span>
           </td>
           <td>
-            {% if item.sla_restante is not None %}
-              <span class="sla-indicator {{ item.estado_sla|sla_css }}">
-                <span class="sla-dot"></span>
-                {% if item.sla_restante < 0 %}
-                  Vencido ({{ item.sla_restante|floatformat:1 }}h)
-                {% else %}
-                  {{ item.sla_restante|floatformat:1 }}h rest.
-                {% endif %}
+            {% if t.dentro_sla is True %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fw-semibold" style="font-size:.75rem">
+                <i class="bi bi-check-circle-fill me-1"></i>Dentro del SLA
               </span>
-            {% elif t.dentro_sla is not None %}
-              <span class="sla-indicator {{ item.estado_sla|sla_css }}">
-                <span class="sla-dot"></span>
-                {% if t.dentro_sla %}✓ En plazo{% else %}✗ Fuera{% endif %}
+            {% elif t.dentro_sla is False %}
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 fw-semibold" style="font-size:.75rem">
+                <i class="bi bi-x-circle-fill me-1"></i>Fuera del SLA
               </span>
+            {% elif item.sla_restante is not None %}
+              {% if item.sla_restante < 0 %}
+                <span class="badge bg-danger text-white px-2 py-1 fw-semibold" style="font-size:.75rem">
+                  <i class="bi bi-exclamation-triangle-fill me-1"></i>Vencido ({{ item.sla_restante|floatformat:1 }}h)
+                </span>
+              {% elif item.estado_sla == 'advertencia' %}
+                <span class="badge bg-warning text-dark px-2 py-1 fw-semibold" style="font-size:.75rem">
+                  <i class="bi bi-clock-history me-1"></i>{{ item.sla_restante|floatformat:1 }}h rest.
+                </span>
+              {% else %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fw-semibold" style="font-size:.75rem">
+                  <i class="bi bi-clock me-1"></i>{{ item.sla_restante|floatformat:1 }}h rest.
+                </span>
+              {% endif %}
             {% else %}
               <span class="text-muted" style="font-size:.75rem">—</span>
             {% endif %}
