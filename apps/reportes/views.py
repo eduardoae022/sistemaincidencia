@@ -422,3 +422,133 @@ def bitacora_auditoria(request):
         }
     }
     return render(request, 'reportes/bitacora.html', context)
+
+
+@login_required
+@requiere_rol('Administrador', 'Operador')
+def fichas_reportes(request):
+    """
+    Módulo de Reportes de Fichas (15 reportes periódicos de 3 días operarios cada uno)
+    Muestra los 15 reportes en fila, con detalle interactivo breve.
+    """
+    PERIODOS_FICHAS = [
+        (1, "2026-09-01", "2026-09-03", "01/09 al 03/09"),
+        (2, "2026-09-04", "2026-09-07", "04/09 al 07/09"),
+        (3, "2026-09-08", "2026-09-10", "08/09 al 10/09"),
+        (4, "2026-09-11", "2026-09-14", "11/09 al 14/09"),
+        (5, "2026-09-15", "2026-09-17", "15/09 al 17/09"),
+        (6, "2026-09-18", "2026-09-21", "18/09 al 21/09"),
+        (7, "2026-09-22", "2026-09-24", "22/09 al 24/09"),
+        (8, "2026-09-25", "2026-09-28", "25/09 al 28/09"),
+        (9, "2026-09-29", "2026-10-01", "29/09 al 01/10"),
+        (10, "2026-10-02", "2026-10-05", "02/10 al 05/10"),
+        (11, "2026-10-06", "2026-10-09", "06/10 al 09/10"),
+        (12, "2026-10-10", "2026-10-13", "10/10 al 13/10"),
+        (13, "2026-10-14", "2026-10-16", "14/10 al 16/10"),
+        (14, "2026-10-17", "2026-10-20", "17/10 al 20/10"),
+        (15, "2026-10-21", "2026-10-23", "21/10 al 23/10"),
+    ]
+
+    reportes = []
+    total_general = 0
+
+    for num, f_ini, f_fin, f_corta in PERIODOS_FICHAS:
+        qs_periodo = Ticket.objects.filter(
+            fecha_hora_registro__date__gte=f_ini,
+            fecha_hora_registro__date__lte=f_fin
+        ).select_related('categoria', 'servicio_afectado', 'solicitante', 'tecnico_asignado')
+
+        ti = qs_periodo.count()
+        total_general += ti
+
+        # 1. TCC
+        validados = qs_periodo.filter(prioridad_operador__isnull=False, prioridad_correcta__isnull=False)
+        ic = validados.filter(prioridad_operador=F('prioridad_correcta')).count()
+        tcc = round((ic / ti * 100), 2) if ti > 0 else 0.0
+
+        # 2. Precision Alta
+        asig_alta = qs_periodo.filter(prioridad_operador='Alta')
+        total_alta = asig_alta.count()
+        vp = asig_alta.filter(prioridad_correcta='Alta').count()
+        fp = total_alta - vp
+        prec_alta = round((vp / total_alta * 100), 2) if total_alta > 0 else 0.0
+
+        # 3. TPA Crítico
+        criticos = qs_periodo.filter(prioridad_correcta='Alta')
+        tic = criticos.count()
+
+        deltas = []
+        for t in criticos:
+            if t.fecha_hora_primera_atencion and t.fecha_hora_registro:
+                deltas.append((t.fecha_hora_primera_atencion - t.fecha_hora_registro).total_seconds() / 3600.0)
+
+        tpa_horas = round(sum(deltas) / len(deltas), 2) if deltas else 0.0
+        tot_m = int(round(tpa_horas * 60))
+        tpa_formato = f"{tot_m // 60}h {tot_m % 60:02d}min"
+
+        # 4. TAO
+        iat = criticos.filter(dentro_sla=True).count()
+        tao = round((iat / tic * 100), 2) if tic > 0 else 0.0
+
+        # Distribución de prioridades
+        p_alta_cnt = qs_periodo.filter(prioridad_operador='Alta').count()
+        p_media_cnt = qs_periodo.filter(prioridad_operador='Media').count()
+        p_baja_cnt = qs_periodo.filter(prioridad_operador='Baja').count()
+
+        # Top categorías
+        cats = qs_periodo.values('categoria__nombre').annotate(cnt=Count('id')).order_by('-cnt')[:3]
+        top_cats = [{'nombre': c['categoria__nombre'] or 'Sin categoría', 'cnt': c['cnt']} for c in cats]
+
+        # Muestra rápida de hasta 5 incidencias para el breve detalle
+        tickets_muestra = list(qs_periodo.order_by('id')[:5])
+
+        reportes.append({
+            'num': num,
+            'num_fmt': f"{num:02d}",
+            'fecha_corta': f_corta,
+            'f_ini': f_ini,
+            'f_fin': f_fin,
+            'f_ini_fmt': datetime.strptime(f_ini, "%Y-%m-%d").strftime("%d/%m/%Y"),
+            'f_fin_fmt': datetime.strptime(f_fin, "%Y-%m-%d").strftime("%d/%m/%Y"),
+            'dias_operarios': 3,
+            'ti': ti,
+            'ic': ic,
+            'tcc': tcc,
+            'total_alta': total_alta,
+            'vp': vp,
+            'fp': fp,
+            'prec_alta': prec_alta,
+            'tic': tic,
+            'tpa_horas': tpa_horas,
+            'tpa_formato': tpa_formato,
+            'iat': iat,
+            'tao': tao,
+            'p_alta': p_alta_cnt,
+            'p_media': p_media_cnt,
+            'p_baja': p_baja_cnt,
+            'top_cats': top_cats,
+            'tickets_muestra': tickets_muestra,
+        })
+
+    # Resumen global de los 15 reportes
+    tcc_global = round(sum(r['tcc'] for r in reportes) / 15.0, 2)
+    prec_alta_global = round(sum(r['prec_alta'] for r in reportes) / 15.0, 2)
+    tpa_global = round(sum(r['tpa_horas'] for r in reportes) / 15.0, 2)
+    tot_m_glob = int(round(tpa_global * 60))
+    tpa_global_formato = f"{tot_m_glob // 60}h {tot_m_glob % 60:02d}min"
+    tao_global = round(sum(r['tao'] for r in reportes) / 15.0, 2)
+
+    context = {
+        'reportes': reportes,
+        'resumen': {
+            'total_tickets': total_general,
+            'promedio_tcc': tcc_global,
+            'promedio_precision_alta': prec_alta_global,
+            'promedio_tpa': tpa_global,
+            'promedio_tpa_formato': tpa_global_formato,
+            'promedio_tao': tao_global,
+            'total_fichas': 15,
+            'dias_operarios_total': 45,
+        }
+    }
+    return render(request, 'reportes/fichas_reportes.html', context)

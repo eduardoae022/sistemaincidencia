@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static ticket_tags %}
+
+{% block title %}Reportes Periódicos (15 Fichas){% endblock %}
+{% block topbar_title %}Módulo de Reportes — Evaluación de 15 Fichas (3 Días Operarios){% endblock %}
+{% block nav_fichas %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <div>
+    <h4 class="mb-1 fw-bold text-dark">
+      <i class="bi bi-calendar-range me-2 text-primary"></i>Reportes de Fichas de Registro (Post-Test)
+    </h4>
+    <p class="text-muted mb-0" style="font-size:.88rem;">
+      Consolidado de las <strong>320 incidencias</strong> agrupadas en <strong>15 reportes periódicos de 3 días operarios</strong> cada uno (URBINMOBILIARIA S.A.C.).
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'reportes:dashboard' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-speedometer2 me-1"></i>Ir a Dashboard
+    </a>
+    <a href="{% url 'reportes:exportar_excel' %}?todo=1" class="btn btn-sm btn-success">
+      <i class="bi bi-file-earmark-excel me-1"></i>Exportar Todo (Excel)
+    </a>
+  </div>
+</div>
+
+<!-- Tarjetas de Resumen Global de las 15 Fichas -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3 col-sm-6">
+    <div class="kpi-card kpi-primary hover-lift">
+      <div class="kpi-label">Total Incidencias Evaluadas</div>
+      <div class="kpi-value">{{ resumen.total_tickets }}</div>
+      <div class="kpi-sub">{{ resumen.total_fichas }} reportes ({{ resumen.dias_operarios_total }} días operarios)</div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="kpi-card kpi-success hover-lift">
+      <div class="kpi-label">TCC Promedio (Clasificación)</div>
+      <div class="kpi-value">{{ resumen.promedio_tcc|floatformat:2 }}%</div>
+      <div class="kpi-sub">Precisión Alta promedio: <strong>{{ resumen.promedio_precision_alta|floatformat:2 }}%</strong></div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="kpi-card kpi-info hover-lift">
+      <div class="kpi-label">TPA Crítico Promedio</div>
+      <div class="kpi-value">{{ resumen.promedio_tpa|floatformat:2 }}h</div>
+      <div class="kpi-sub">{{ resumen.promedio_tpa_formato }} (1ra atención Alta)</div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="kpi-card kpi-warning hover-lift">
+      <div class="kpi-label">TAO Promedio (Cumplimiento SLA)</div>
+      <div class="kpi-value">{{ resumen.promedio_tao|floatformat:2 }}%</div>
+      <div class="kpi-sub">Atención oportuna en casos críticos</div>
+    </div>
+  </div>
+</div>
+
+<!-- Lista de los 15 Reportes en Fila -->
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+    <h6 class="mb-0 fw-bold text-dark">
+      <i class="bi bi-list-columns-reverse me-2 text-primary"></i>Listado de los 15 Reportes Periódicos
+    </h6>
+    <span class="badge bg-light text-dark border">
+      <i class="bi bi-clock-history me-1"></i>3 días operarios por reporte
+    </span>
+  </div>
+  <div class="card-body p-0">
+    <div class="accordion accordion-flush" id="accordionReportes">
+      {% for r in reportes %}
+      <div class="accordion-item border-bottom">
+        <h2 class="accordion-header" id="heading_{{ r.num }}">
+          <button class="accordion-button collapsed py-3 px-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_{{ r.num }}" aria-expanded="false" aria-controls="collapse_{{ r.num }}">
+            <div class="d-flex align-items-center justify-content-between w-100 me-3 flex-wrap gap-2">
+              <!-- Identificador y Fechas -->
+              <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-primary px-3 py-2 fw-bold" style="font-size:.85rem; letter-spacing:.03em;">
+                  Reporte #{{ r.num_fmt }}
+                </span>
+                <div>
+                  <div class="fw-bold text-dark" style="font-size:.95rem;">
+                    <i class="bi bi-calendar3 me-1 text-secondary"></i>{{ r.f_ini_fmt }} al {{ r.f_fin_fmt }}
+                  </div>
+                  <small class="text-muted" style="font-size:.78rem;">
+                    <i class="bi bi-calendar-check me-1"></i>Período evaluado: {{ r.dias_operarios }} días operarios
+                  </small>
+                </div>
+              </div>
+
+              <!-- Métricas resumen en Chips -->
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="badge bg-light text-dark border px-2 py-1" title="Total incidentes evaluados en el período">
+                  <i class="bi bi-ticket-perforated me-1 text-primary"></i>{{ r.ti }} tickets
+                </span>
+                <span class="badge bg-light text-success border px-2 py-1" title="Tasa de clasificación correcta">
+                  <i class="bi bi-check-circle me-1"></i>TCC: <strong>{{ r.tcc|floatformat:2 }}%</strong>
+                </span>
+                <span class="badge bg-light text-info border px-2 py-1" title="Precisión en Prioridad Alta">
+                  <i class="bi bi-bullseye me-1"></i>Prec. Alta: <strong>{{ r.prec_alta|floatformat:1 }}%</strong>
+                </span>
+                <span class="badge bg-light text-primary border px-2 py-1" title="Tiempo de primera atención crítico">
+                  <i class="bi bi-clock me-1"></i>TPA: <strong>{{ r.tpa_horas|floatformat:2 }}h</strong>
+                </span>
+                <span class="badge bg-light text-warning border px-2 py-1" title="Tasa de atención oportuna en alta">
+                  <i class="bi bi-shield-check me-1"></i>TAO: <strong>{{ r.tao|floatformat:1 }}%</strong>
+                </span>
+              </div>
+            </div>
+          </button>
+        </h2>
+
+        <!-- Breve detalle desplegable -->
+        <div id="collapse_{{ r.num }}" class="accordion-collapse collapse" aria-labelledby="heading_{{ r.num }}" data-bs-parent="#accordionReportes">
+          <div class="accordion-body bg-light bg-opacity-50 p-4 border-top">
+            <!-- Resumen ejecutivo de la ficha -->
+            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+              <div class="fw-semibold text-secondary" style="font-size:.88rem;">
+                <i class="bi bi-info-circle me-1 text-primary"></i>Detalle de indicadores de la ficha de registro del período <strong>{{ r.fecha_corta }}</strong>:
+              </div>
+              <a href="{% url 'tickets:bandeja' %}?fecha_desde={{ r.f_ini }}&fecha_hasta={{ r.f_fin }}" class="btn btn-sm btn-outline-primary" style="font-size:.8rem;">
+                <i class="bi bi-box-arrow-up-right me-1"></i>Ver las {{ r.ti }} incidencias en Bandeja
+              </a>
+            </div>
+
+            <!-- 4 Indicadores en tarjetas compactas -->
+            <div class="row g-3 mb-3">
+              <div class="col-md-3 col-sm-6">
+                <div class="p-3 bg-white rounded border shadow-sm h-100">
+                  <small class="text-muted d-block text-uppercase fw-semibold" style="font-size:.7rem;">Tasa Clasif. Correcta (TCC)</small>
+                  <div class="h4 mb-0 fw-bold text-success">{{ r.tcc|floatformat:2 }}%</div>
+                  <small class="text-muted" style="font-size:.75rem;">{{ r.ic }} de {{ r.ti }} incidencias clasificadas bien</small>
+                </div>
+              </div>
+              <div class="col-md-3 col-sm-6">
+                <div class="p-3 bg-white rounded border shadow-sm h-100">
+                  <small class="text-muted d-block text-uppercase fw-semibold" style="font-size:.7rem;">Precisión Prioridad Alta</small>
+                  <div class="h4 mb-0 fw-bold text-info">{{ r.prec_alta|floatformat:2 }}%</div>
+                  <small class="text-muted" style="font-size:.75rem;">VP: {{ r.vp }} | FP: {{ r.fp }} (Total Alta: {{ r.total_alta }})</small>
+                </div>
+              </div>
+              <div class="col-md-3 col-sm-6">
+                <div class="p-3 bg-white rounded border shadow-sm h-100">
+                  <small class="text-muted d-block text-uppercase fw-semibold" style="font-size:.7rem;">TPA Crítico (Alta)</small>
+                  <div class="h4 mb-0 fw-bold text-primary">{{ r.tpa_horas|floatformat:2 }}h</div>
+                  <small class="text-muted" style="font-size:.75rem;">{{ r.tpa_formato }} promedio ({{ r.tic }} críticos)</small>
+                </div>
+              </div>
+              <div class="col-md-3 col-sm-6">
+                <div class="p-3 bg-white rounded border shadow-sm h-100">
+                  <small class="text-muted d-block text-uppercase fw-semibold" style="font-size:.7rem;">Tasa Atención Oportuna (TAO)</small>
+                  <div class="h4 mb-0 fw-bold text-warning">{{ r.tao|floatformat:2 }}%</div>
+                  <small class="text-muted" style="font-size:.75rem;">{{ r.iat }} de {{ r.tic }} casos críticos dentro de SLA</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Desglose breve de incidencias atendidas -->
+            <div class="bg-white p-3 rounded border shadow-sm">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="fw-semibold text-dark" style="font-size:.82rem;">
+                  <i class="bi bi-card-checklist me-1 text-secondary"></i>Primeras incidencias de este reporte:
+                </span>
+                <span style="font-size:.75rem;" class="text-muted">
+                  Distribución de prioridades:
+                  <span class="badge bg-danger bg-opacity-10 text-danger ms-1">Alta: {{ r.p_alta }}</span>
+                  <span class="badge bg-warning bg-opacity-10 text-warning ms-1">Media: {{ r.p_media }}</span>
+                  <span class="badge bg-info bg-opacity-10 text-info ms-1">Baja: {{ r.p_baja }}</span>
+                </span>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0" style="font-size:.8rem;">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="width:90px;">Código</th>
+                      <th>Descripción de la incidencia</th>
+                      <th>Solicitante</th>
+                      <th>Categoría</th>
+                      <th style="width:100px;">Prioridad</th>
+                      <th style="width:100px;">Tiempo (h)</th>
+                      <th style="width:90px;"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for t in r.tickets_muestra %}
+                    <tr>
+                      <td class="fw-bold text-primary">{{ t.codigo }}</td>
+                      <td class="text-truncate" style="max-width:280px;" title="{{ t.descripcion }}">{{ t.descripcion }}</td>
+                      <td>{{ t.solicitante.get_full_name|default:t.solicitante.username }}</td>
+                      <td><span class="text-muted">{{ t.categoria.nombre|default:"—" }}</span></td>
+                      <td>
+                        <span class="badge-prioridad {{ t.prioridad_operador|prioridad_css }}">
+                          {{ t.prioridad_operador|default:"Sin asignar" }}
+                        </span>
+                      </td>
+                      <td>
+                        <div class="fw-semibold text-dark">{{ t.horas_transcurridas|floatformat:2 }}h</div>
+                      </td>
+                      <td class="text-end">
+                        <a href="{% url 'tickets:detalle' t.pk %}" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:.72rem;">
+                          Ver detalle
+                        </a>
+                      </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="7" class="text-center text-muted py-2">Sin incidencias registradas en este período.</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
